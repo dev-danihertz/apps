@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Padel Tracker</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- Toast Notifications -->
+        <div id="toast-container"></div>
+
+        <!-- Quick Pay Modal -->
+        <div id="pay-modal" class="modal hidden">
+            <div class="card modal-content">
+                <h3>Declare Payment</h3>
+                <form id="pay-form">
+                    <input type="hidden" id="pay-lesson-id">
+                    <div class="form-group">
+                        <label for="pay-amount">Amount (£)</label>
+                        <input type="text" id="pay-amount" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="pay-method">Payment Method</label>
+                        <select id="pay-method" style="width:100%; padding:14px; border-radius:8px; border:1px solid #ddd;">
+                            <option value="App">App</option>
+                            <option value="Bank Transfer">Bank Transfer</option>
+                            <option value="Cash">Cash</option>
+                            <option value="Card">Card</option>
+                            <option value="Voucher">Voucher</option>
+                            <option value="Membership">Membership</option>
+                            <option value="Kevin Student">Kevin Student</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="pay-status">Status</label>
+                        <select id="pay-status" style="width:100%; padding:14px; border-radius:8px; border:1px solid #ddd;">
+                            <option value="Paid">Paid</option>
+                            <option value="Partial">Partial</option>
+                            <option value="Pending">Pending</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button type="submit" class="btn-primary" style="flex: 2;">Save Payment</button>
+                        <button type="button" id="close-pay-modal" class="btn-primary btn-cancel" style="flex: 1; margin-top: 0;">Close</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Login Screen -->
+        <section id="login-screen" class="screen">
+            <div class="card">
+                <h2>Padel Login</h2>
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="email">Username</label>
+                        <input type="text" id="email" value="admin" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" required>
+                    </div>
+                    <button type="submit" class="btn-primary">Login</button>
+                </form>
+                <p id="login-error" class="error"></p>
+            </div>
+        </section>
+
+        <!-- Main Screen with Tabs -->
+        <section id="dashboard-screen" class="screen hidden">
+            <header>
+                <h2 id="tab-title">Insert Lesson</h2>
+                <button id="logout-btn" class="btn-text">Logout</button>
+            </header>
+            
+            <!-- Tab Content -->
+            <div id="tab-content">
+                <!-- Insert Tab -->
+                <div id="tab-insert" class="tab-pane">
+                    <div class="card">
+                        <form id="lesson-form">
+                            <div class="form-group">
+                                <label for="date">Lesson Date</label>
+                                <input type="date" id="date" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="start-time">Start Time</label>
+                                <input type="time" id="start-time" value="12:00" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="duration">Duration (Hours)</label>
+                                <input type="text" id="duration" value="1" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="end-time">End Time</label>
+                                <input type="time" id="end-time" readonly style="background: #f0f0f0;">
+                            </div>
+                            <div class="form-group">
+                                <label for="value">Coach Rate/Hour (£)</label>
+                                <input type="text" id="value" value="25" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="total-value">Total Coach Fee (£)</label>
+                                <input type="text" id="total-value" readonly style="background: #f0f0f0;">
+                            </div>
+                            <div class="form-group">
+                                <label for="name">Name</label>
+                                <input type="text" id="name" placeholder="e.g. Marcos">
+                            </div>
+                            <div class="form-group">
+                                <label for="model">Model</label>
+                                <input type="text" id="model" value="KG Academy">
+                            </div>
+                            <div class="form-group">
+                                <label for="peak-type">Schedule Type</label>
+                                <select id="peak-type" style="width:100%; padding:14px; border-radius:8px; border:1px solid #ddd;">
+                                    <option value="Peak">Peak</option>
+                                    <option value="Off Peak">Off Peak</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="lesson-type">Lesson Type</label>
+                                <select id="lesson-type" style="width:100%; padding:14px; border-radius:8px; border:1px solid #ddd;">
+                                    <option value="Private">Private</option>
+                                    <option value="Open">Open</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="players">Players</label>
+                                <select id="players" style="width:100%; padding:14px; border-radius:8px; border:1px solid #ddd;">
+                                    <option value="1-1">1-1</option>
+                                    <option value="1-2">1-2</option>
+                                    <option value="1-3">1-3</option>
+                                    <option value="1-4">1-4</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="payment-method">Payment Method</label>
+                                <select id="payment-method" style="width:100%; padding:14px; border-radius:8px; border:1px solid #ddd;">
+                                    <option value="App" selected>App</option>
+                                    <option value="Bank Transfer">Bank Transfer</option>
+                                    <option value="Cash">Cash</option>
+                                    <option value="Card">Card</option>
+                                    <option value="Voucher">Voucher</option>
+                                    <option value="Membership">Membership</option>
+                                    <option value="Kevin Student">Kevin Student</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div id="payment-other-group" class="form-group hidden">
+                                <label for="payment-method-other">Specify Other Method</label>
+                                <input type="text" id="payment-method-other" placeholder="Enter payment method">
+                            </div>
+                            <div class="form-group">
+                                <label for="payment-status">Payment Status</label>
+                                <select id="payment-status" style="width:100%; padding:14px; border-radius:8px; border:1px solid #ddd;">
+                                    <option value="Pending">Pending</option>
+                                    <option value="Paid">Paid</option>
+                                    <option value="Partial">Partial</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="general-note">General Note</label>
+                                <textarea id="general-note" rows="3" style="width:100%; padding:14px; border-radius:8px; border:1px solid #ddd; font-family: inherit; font-size: 1rem;"></textarea>
+                            </div>
+                            <button type="submit" class="btn-primary">Register Lesson</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Records Tab -->
+                <div id="tab-records" class="tab-pane hidden">
+                    <div class="history-section">
+                        <div id="lessons-list">
+                            <!-- Lessons will be inserted here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Graphics Tab -->
+                <div id="tab-graphics" class="tab-pane hidden">
+                    <div class="card">
+                        <h3>Monthly Frequency</h3>
+                        <div class="chart-container">
+                            <canvas id="monthlyChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-top: 20px;">
+                        <h3>Weekly Frequency</h3>
+                        <div class="chart-container">
+                            <canvas id="weeklyChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-top: 20px;">
+                        <h3>Activity by Day of the Week</h3>
+                        <div class="chart-container">
+                            <canvas id="dayOfWeekChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-top: 20px;">
+                        <h3>Monthly Investment (£)</h3>
+                        <div class="chart-container">
+                            <canvas id="monthlyFinanceChart"></canvas>
+                        </div>
+                    </div>
+                    <div id="stats-summary" class="stats-card">
+                        <!-- Statistical Summary -->
+                    </div>
+                </div>
+
+                <!-- Data Tab -->
+                <div id="tab-data" class="tab-pane hidden">
+                    <div class="card">
+                        <h3>Export Data</h3>
+                        <p style="margin-bottom: 15px; color: #666; font-size: 0.9rem;">Download all your lesson records as a CSV file for backup.</p>
+                        <button id="export-btn" class="btn-primary">Download Backup (.csv)</button>
+                    </div>
+
+                    <div class="card" style="margin-top: 20px;">
+                        <h3>Import Data</h3>
+                        <p style="margin-bottom: 15px; color: #666; font-size: 0.9rem;">Upload a previously exported CSV file to restore your records.</p>
+                        <input type="file" id="import-file" accept=".csv" style="margin-bottom: 15px; border: none; padding: 0;">
+                        <button id="import-btn" class="btn-primary" style="background-color: #555;">Import Backup</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Navigation -->
+            <nav class="bottom-nav">
+                <button class="nav-item active" data-tab="insert">
+                    <span class="icon">➕</span>
+                    <span class="label">Insert</span>
+                </button>
+                <button class="nav-item" data-tab="records">
+                    <span class="icon">📋</span>
+                    <span class="label">Records</span>
+                </button>
+                <button class="nav-item" data-tab="graphics">
+                    <span class="icon">📊</span>
+                    <span class="label">Graphics</span>
+                </button>
+                <button class="nav-item" data-tab="data">
+                    <span class="icon">💾</span>
+                    <span class="label">Data</span>
+                </button>
+            </nav>
+        </section>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
