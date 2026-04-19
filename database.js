@@ -2,7 +2,8 @@ const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcryptjs');
 const path = require('path');
 
-const dbPath = path.resolve(__dirname, 'padel.db');
+// No Fly.io, usaremos o volume montado em /data/padel.db definido no fly.toml
+const dbPath = process.env.DATABASE_URL || path.resolve(__dirname, 'padel.db');
 const db = new sqlite3.Database(dbPath);
 
 db.serialize(() => {

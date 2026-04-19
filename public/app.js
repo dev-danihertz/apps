@@ -35,6 +35,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let dayOfWeekChart = null;
     let monthlyFinanceChart = null;
 
+    let comparisonChart = null;
+    let avgTicketChart = null;
+
     const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
     function showToast(message, type = 'success') {
@@ -128,10 +131,79 @@ document.addEventListener('DOMContentLoaded', () => {
             // Se for a aba de gráficos em tela grande, o CSS cuidará do display: grid
             // Mas precisamos garantir que as outras abas não tentem usar grid se não precisarem.
             
-            const titles = { insert: 'Insert Lesson', records: 'My Records', graphics: 'Performance', data: 'Manage Data' };
+            const titles = { insert: 'Insert Lesson', records: 'My Records', graphics: 'Performance', regtab: 'Full Records', data: 'Manage Data' };
             tabTitle.textContent = titles[targetTab];
             if (targetTab === 'records') loadLessons();
             if (targetTab === 'graphics') updateGraphics();
+            if (targetTab === 'regtab') loadRegTab();
+        });
+    });
+
+    // RegTab Logic
+    let currentSort = { column: 'date', direction: 'desc' };
+    
+    async function loadRegTab() {
+        const res = await fetch('/api/lessons');
+        const lessons = await res.json();
+        renderFullTable(lessons);
+    }
+
+    function renderFullTable(lessons) {
+        const body = document.getElementById('full-table-body');
+        
+        // Sort data
+        const sorted = [...lessons].sort((a, b) => {
+            let valA = a[currentSort.column];
+            let valB = b[currentSort.column];
+            
+            // Handle numeric values
+            if (['duration', 'coach_value', 'total_value'].includes(currentSort.column)) {
+                valA = parseFloat(valA) || 0;
+                valB = parseFloat(valB) || 0;
+            }
+
+            if (valA < valB) return currentSort.direction === 'asc' ? -1 : 1;
+            if (valA > valB) return currentSort.direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+        body.innerHTML = sorted.map(l => `
+            <tr>
+                <td>${l.date}</td>
+                <td>${l.start_time}</td>
+                <td>${l.duration}h</td>
+                <td>£${parseFloat(l.coach_value).toFixed(2)}</td>
+                <td>£${parseFloat(l.total_value).toFixed(2)}</td>
+                <td>${l.name || ''}</td>
+                <td>${(l.model || '').substring(0, 3)}</td>
+                <td>${(l.peak_type || '').substring(0, 4)}</td>
+                <td>${(l.lesson_type || '').substring(0, 4)}</td>
+                <td>${(l.players_count || '').substring(0, 4)}</td>
+                <td>${l.payment_method || ''}</td>
+                <td>${l.payment_status || ''}</td>
+                <td>${l.general_note || ''}</td>
+            </tr>
+        `).join('');
+    }
+
+    document.querySelectorAll('#full-table-header th').forEach(th => {
+        th.addEventListener('click', () => {
+            const column = th.getAttribute('data-sort');
+            if (currentSort.column === column) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.column = column;
+                currentSort.direction = 'asc';
+            }
+            
+            // Update UI indicators
+            document.querySelectorAll('#full-table-header th').forEach(h => {
+                const col = h.getAttribute('data-sort');
+                h.textContent = h.textContent.replace(/[↕↑↓]/g, '').trim() + ' ' + 
+                    (col === currentSort.column ? (currentSort.direction === 'asc' ? '↑' : '↓') : '↕');
+            });
+
+            loadRegTab();
         });
     });
 
@@ -304,6 +376,27 @@ document.addEventListener('DOMContentLoaded', () => {
             lessonsList.innerHTML = '<p style="text-align:center;color:#888;margin-top:20px;">No lessons found.</p>';
             return;
         }
+
+        const today = new Date().toISOString().split('T')[0];
+        const pastLessons = lessons.filter(l => l.date <= today);
+        const futureLessons = lessons.filter(l => l.date > today);
+
+        let html = '';
+
+        if (futureLessons.length > 0) {
+            html += '<h3 style="margin-top: 10px; padding-left: 10px; color: var(--primary);">Upcoming Lessons</h3>';
+            html += renderTable(futureLessons);
+        }
+
+        if (pastLessons.length > 0) {
+            html += '<h3 style="margin-top: 20px; padding-left: 10px; color: #666;">Past Lessons</h3>';
+            html += renderTable(pastLessons);
+        }
+
+        lessonsList.innerHTML = html;
+    }
+
+    function renderTable(lessonList) {
         let tableHTML = `
             <div class="records-table">
                 <div class="record-row records-header">
@@ -313,7 +406,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="record-cell"></div>
                 </div>
         `;
-        tableHTML += lessons.map(l => {
+        tableHTML += lessonList.map(l => {
             const [h, m] = (l.start_time || '12:00').split(':').map(Number);
             const d = new Date(); d.setHours(h, m, 0);
             d.setMinutes(d.getMinutes() + (l.duration * 60));
@@ -345,7 +438,7 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         }).join('');
         tableHTML += '</div>';
-        lessonsList.innerHTML = tableHTML;
+        return tableHTML;
     }
 
     window.openPayModal = (lesson) => {
@@ -358,13 +451,124 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function updateGraphics() {
         const res = await fetch('/api/lessons');
-        const lessons = await res.json();
+        const allLessons = await res.json();
+        
+        // Filtrar para excluir datas futuras dos gráficos
+        const today = new Date().toISOString().split('T')[0];
+        const lessons = allLessons.filter(l => l.date <= today);
+
+        if (allLessons.length === 0) return;
+        renderComparisonChart(allLessons);
+        
         if (lessons.length === 0) return;
         renderMonthlyChart(lessons);
         renderWeeklyChart(lessons);
         renderDayOfWeekChart(lessons);
         renderMonthlyFinanceChart(lessons);
+        renderAvgTicketChart(lessons);
         renderStatsSummary(lessons);
+    }
+
+    function renderAvgTicketChart(lessons) {
+        const monthlyData = {};
+        lessons.forEach(l => {
+            const [year, month] = l.date.split('-');
+            const monthLabel = `${month}/${year}`;
+            const key = `${year}-${month}`;
+            if (!monthlyData[key]) monthlyData[key] = { label: monthLabel, total: 0, count: 0 };
+            monthlyData[key].total += l.total_value;
+            monthlyData[key].count++;
+        });
+
+        const sortedKeys = Object.keys(monthlyData).sort();
+        const ctx = document.getElementById('avgTicketChart').getContext('2d');
+        if (avgTicketChart) avgTicketChart.destroy();
+        avgTicketChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: sortedKeys.map(k => monthlyData[k].label),
+                datasets: [{
+                    label: 'Avg Ticket (£)',
+                    data: sortedKeys.map(k => (monthlyData[k].total / monthlyData[k].count)),
+                    backgroundColor: '#1976d2',
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                ...chartOptions(false),
+                plugins: {
+                    legend: { display: false }
+                }
+            },
+            plugins: [{
+                id: 'barValuePlugin',
+                afterDatasetsDraw(chart) {
+                    const { ctx, data } = chart;
+                    ctx.save();
+                    ctx.font = 'bold 10px sans-serif';
+                    ctx.fillStyle = '#555';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'bottom';
+                    data.datasets.forEach((dataset, i) => {
+                        const meta = chart.getDatasetMeta(i);
+                        meta.data.forEach((datapoint, index) => {
+                            const val = '£' + dataset.data[index].toFixed(2);
+                            ctx.fillText(val, datapoint.x, datapoint.y - 5);
+                        });
+                    });
+                    ctx.restore();
+                }
+            }]
+        });
+    }
+
+    function renderComparisonChart(allLessons) {
+        const today = new Date().toISOString().split('T')[0];
+        const pastCount = allLessons.filter(l => l.date <= today).length;
+        const futureCount = allLessons.filter(l => l.date > today).length;
+
+        const ctx = document.getElementById('comparisonChart').getContext('2d');
+        if (comparisonChart) comparisonChart.destroy();
+        comparisonChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Past', 'Upcoming'],
+                datasets: [{
+                    data: [pastCount, futureCount],
+                    backgroundColor: ['#666', '#2e7d32'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'bottom'
+                    }
+                },
+                cutout: '70%'
+            },
+            plugins: [{
+                id: 'centerText',
+                afterDatasetsDraw(chart) {
+                    const { ctx, data } = chart;
+                    const { width, height } = chart;
+                    ctx.save();
+                    ctx.font = 'bold 16px sans-serif';
+                    ctx.fillStyle = '#333';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    const text = `${data.datasets[0].data[0]} | ${data.datasets[0].data[1]}`;
+                    ctx.fillText(text, width / 2, height / 2 - 10);
+                    ctx.font = '10px sans-serif';
+                    ctx.fillStyle = '#888';
+                    ctx.fillText('Past vs Upcoming', width / 2, height / 2 + 15);
+                    ctx.restore();
+                }
+            }]
+        });
     }
 
     function renderMonthlyChart(lessons) {
@@ -537,7 +741,13 @@ document.addEventListener('DOMContentLoaded', () => {
         durationInput.value = lesson.duration.toString();
         nameInput.value = lesson.name || '';
         modelInput.value = lesson.model || 'KG Academy';
-        peakInput.value = lesson.peak_type || 'Peak';
+        
+        // Normalize peak_type to match select options
+        let pt = lesson.peak_type || 'Peak';
+        if (pt.toLowerCase().includes('off')) pt = 'Off Peak';
+        else if (pt.toLowerCase().includes('peak') || pt.toLowerCase().includes('premium')) pt = 'Peak';
+        peakInput.value = pt;
+
         lessonTypeInput.value = lesson.lesson_type || 'Private';
         playersInput.value = lesson.players_count || '1-1';
         

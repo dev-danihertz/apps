@@ -51,7 +51,9 @@ body {
     /* Gráficos de linha do tempo ocupam a largura toda */
     #tab-graphics .card:nth-child(1), /* Monthly Frequency */
     #tab-graphics .card:nth-child(2), /* Weekly Frequency */
-    #tab-graphics .card:nth-child(4)  /* Monthly Investment */ {
+    #tab-graphics .card:nth-child(4), /* Monthly Investment */
+    #tab-graphics .card:nth-child(5), /* Past vs. Upcoming */
+    #tab-graphics .card:nth-child(6)  /* Average Ticket */ {
         grid-column: span 2;
     }
 
@@ -321,3 +323,39 @@ input:focus {
 }
 
 .btn-pay { color: #43a047; }
+
+/* Full Table Styles (RegTab) */
+.full-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+    background: white;
+}
+
+.full-table th, .full-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+.full-table th {
+    background-color: #f4f4f4;
+    cursor: pointer;
+    position: sticky;
+    top: 0;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.full-table th:hover {
+    background-color: #e0e0e0;
+}
+
+.full-table tr:nth-child(even) {
+    background-color: #fafafa;
+}
+
+.full-table tr:hover {
+    background-color: #f1f1f1;
+}
+

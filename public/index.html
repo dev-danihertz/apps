@@ -206,8 +206,48 @@
                             <canvas id="monthlyFinanceChart"></canvas>
                         </div>
                     </div>
+                    <div class="card" style="margin-top: 20px;">
+                        <h3>Past vs. Upcoming Lessons</h3>
+                        <div class="chart-container">
+                            <canvas id="comparisonChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-top: 20px;">
+                        <h3>Average Ticket per Month (£)</h3>
+                        <div class="chart-container">
+                            <canvas id="avgTicketChart"></canvas>
+                        </div>
+                    </div>
                     <div id="stats-summary" class="stats-card">
                         <!-- Statistical Summary -->
+                    </div>
+                </div>
+
+                <!-- RegTab Tab -->
+                <div id="tab-regtab" class="tab-pane hidden">
+                    <div class="card" style="max-width: none; overflow-x: auto; padding: 10px;">
+                        <table id="full-records-table" class="full-table">
+                            <thead>
+                                <tr id="full-table-header">
+                                    <th data-sort="date">Date ↕</th>
+                                    <th data-sort="start_time">Time ↕</th>
+                                    <th data-sort="duration">Dur ↕</th>
+                                    <th data-sort="coach_value">Rate ↕</th>
+                                    <th data-sort="total_value">Total ↕</th>
+                                    <th data-sort="name">Name ↕</th>
+                                    <th data-sort="model">Mod ↕</th>
+                                    <th data-sort="peak_type">Peak ↕</th>
+                                    <th data-sort="lesson_type">Type ↕</th>
+                                    <th data-sort="players_count">Play ↕</th>
+                                    <th data-sort="payment_method">Method ↕</th>
+                                    <th data-sort="payment_status">Status ↕</th>
+                                    <th data-sort="general_note">Note ↕</th>
+                                </tr>
+                            </thead>
+                            <tbody id="full-table-body">
+                                <!-- Data will be inserted here -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
@@ -241,6 +281,10 @@
                 <button class="nav-item" data-tab="graphics">
                     <span class="icon">📊</span>
                     <span class="label">Graphics</span>
+                </button>
+                <button class="nav-item" data-tab="regtab">
+                    <span class="icon">📑</span>
+                    <span class="label">RegTab</span>
                 </button>
                 <button class="nav-item" data-tab="data">
                     <span class="icon">💾</span>
