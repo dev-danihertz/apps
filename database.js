@@ -30,6 +30,7 @@ db.serialize(() => {
     payment_status TEXT DEFAULT 'Pending',
     players_count TEXT DEFAULT '1-1',
     general_note TEXT,
+    exception TEXT,
     FOREIGN KEY (user_id) REFERENCES users(id)
   )`);
 

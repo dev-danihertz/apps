@@ -49,7 +49,7 @@ app.get('/api/check-session', (req, res) => {
 });
 
 app.post('/api/lessons', isAuthenticated, (req, res) => {
-  const { date, coach_value, duration, name, model, peak_type, start_time, lesson_type, payment_method, payment_status, players_count, general_note } = req.body;
+  const { date, coach_value, duration, name, model, peak_type, start_time, lesson_type, payment_method, payment_status, players_count, general_note, exception } = req.body;
   const userId = req.session.userId;
   
   console.log('Saving new lesson:', req.body); // LOG PARA DEBUG
@@ -58,8 +58,8 @@ app.post('/api/lessons', isAuthenticated, (req, res) => {
     return res.status(400).json({ error: 'Date and value are required' });
   }
 
-  db.run("INSERT INTO lessons (user_id, date, coach_value, duration, name, model, peak_type, start_time, lesson_type, payment_method, payment_status, players_count, general_note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", 
-    [userId, date, coach_value, duration || 1, name || '', model || 'KG Academy', peak_type, start_time, lesson_type || 'Private', payment_method || 'App', payment_status || 'Pending', players_count || '1-1', general_note || ''], 
+  db.run("INSERT INTO lessons (user_id, date, coach_value, duration, name, model, peak_type, start_time, lesson_type, payment_method, payment_status, players_count, general_note, exception) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", 
+    [userId, date, coach_value, duration || 1, name || '', model || 'KG Academy', peak_type, start_time, lesson_type || 'Private', payment_method || 'App', payment_status || 'Pending', players_count || '1-1', general_note || '', exception || ''], 
     function(err) {
       if (err) {
         console.error('Error saving lesson:', err.message);
@@ -79,14 +79,14 @@ app.get('/api/lessons', isAuthenticated, (req, res) => {
 });
 
 app.put('/api/lessons/:id', isAuthenticated, (req, res) => {
-  const { date, coach_value, duration, name, model, peak_type, start_time, lesson_type, payment_method, payment_status, players_count, general_note } = req.body;
+  const { date, coach_value, duration, name, model, peak_type, start_time, lesson_type, payment_method, payment_status, players_count, general_note, exception } = req.body;
   const { id } = req.params;
   const userId = req.session.userId;
 
   console.log('Updating lesson:', id, req.body); // LOG PARA DEBUG
 
-  db.run("UPDATE lessons SET date = ?, coach_value = ?, duration = ?, name = ?, model = ?, peak_type = ?, start_time = ?, lesson_type = ?, payment_method = ?, payment_status = ?, players_count = ?, general_note = ? WHERE id = ? AND user_id = ?", 
-    [date, coach_value, duration, name || '', model, peak_type, start_time, lesson_type, payment_method, payment_status, players_count, general_note || '', id, userId], 
+  db.run("UPDATE lessons SET date = ?, coach_value = ?, duration = ?, name = ?, model = ?, peak_type = ?, start_time = ?, lesson_type = ?, payment_method = ?, payment_status = ?, players_count = ?, general_note = ?, exception = ? WHERE id = ? AND user_id = ?", 
+    [date, coach_value, duration, name || '', model, peak_type, start_time, lesson_type, payment_method, payment_status, players_count, general_note || '', exception || '', id, userId], 
     function(err) {
       if (err) {
         console.error('Error updating lesson:', err.message);
@@ -111,7 +111,7 @@ app.get('/api/export', isAuthenticated, (req, res) => {
   db.all("SELECT * FROM lessons WHERE user_id = ?", [userId], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     
-    const headers = ['date', 'coach_value', 'duration', 'name', 'model', 'peak_type', 'start_time', 'lesson_type', 'payment_method', 'payment_status', 'players_count', 'general_note'];
+    const headers = ['date', 'coach_value', 'duration', 'name', 'model', 'peak_type', 'start_time', 'lesson_type', 'payment_method', 'payment_status', 'players_count', 'general_note', 'exception'];
     let csv = headers.join(';') + '\n';
     
     rows.forEach(row => {
@@ -160,7 +160,7 @@ app.post('/api/import', isAuthenticated, (req, res) => {
   });
 
   db.serialize(() => {
-    const stmt = db.prepare("INSERT INTO lessons (user_id, date, coach_value, duration, name, model, peak_type, start_time, lesson_type, payment_method, payment_status, players_count, general_note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    const stmt = db.prepare("INSERT INTO lessons (user_id, date, coach_value, duration, name, model, peak_type, start_time, lesson_type, payment_method, payment_status, players_count, general_note, exception) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     
     let errorOccurred = false;
     lessons.forEach(lesson => {
@@ -177,7 +177,8 @@ app.post('/api/import', isAuthenticated, (req, res) => {
         lesson.payment_method,
         lesson.payment_status,
         lesson.players_count,
-        lesson.general_note || ''
+        lesson.general_note || '',
+        lesson.exception || ''
       ], (err) => {
         if (err) {
           console.error('Row import error:', err);

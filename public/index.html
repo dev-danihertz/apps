@@ -26,20 +26,23 @@
                         <label for="pay-method">Payment Method</label>
                         <select id="pay-method" style="width:100%; padding:14px; border-radius:8px; border:1px solid #ddd;">
                             <option value="App">App</option>
+                            <option value="Playtomic">Playtomic</option>
                             <option value="Bank Transfer">Bank Transfer</option>
                             <option value="Cash">Cash</option>
                             <option value="Card">Card</option>
                             <option value="Voucher">Voucher</option>
                             <option value="Membership">Membership</option>
                             <option value="Kevin Student">Kevin Student</option>
+                            <option value="Myself">Myself</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label for="pay-status">Status</label>
                         <select id="pay-status" style="width:100%; padding:14px; border-radius:8px; border:1px solid #ddd;">
-                            <option value="Paid">Paid</option>
-                            <option value="Partial">Partial</option>
-                            <option value="Pending">Pending</option>
+                            <option value="Waiting">Waiting</option>
+                            <option value="Done">Done</option>
+                            <option value="Kevin">Kevin</option>
+                            <option value="Other">Other</option>
                         </select>
                     </div>
                     <div style="display: flex; gap: 10px;">
@@ -141,12 +144,14 @@
                                 <label for="payment-method">Payment Method</label>
                                 <select id="payment-method" style="width:100%; padding:14px; border-radius:8px; border:1px solid #ddd;">
                                     <option value="App" selected>App</option>
+                                    <option value="Playtomic">Playtomic</option>
                                     <option value="Bank Transfer">Bank Transfer</option>
                                     <option value="Cash">Cash</option>
                                     <option value="Card">Card</option>
                                     <option value="Voucher">Voucher</option>
                                     <option value="Membership">Membership</option>
                                     <option value="Kevin Student">Kevin Student</option>
+                                    <option value="Myself">Myself</option>
                                     <option value="Other">Other</option>
                                 </select>
                             </div>
@@ -157,14 +162,22 @@
                             <div class="form-group">
                                 <label for="payment-status">Payment Status</label>
                                 <select id="payment-status" style="width:100%; padding:14px; border-radius:8px; border:1px solid #ddd;">
-                                    <option value="Pending">Pending</option>
-                                    <option value="Paid">Paid</option>
-                                    <option value="Partial">Partial</option>
+                                    <option value="Waiting">Waiting</option>
+                                    <option value="Done">Done</option>
+                                    <option value="Kevin">Kevin</option>
+                                    <option value="Other">Other</option>
                                 </select>
                             </div>
                             <div class="form-group">
                                 <label for="general-note">General Note</label>
                                 <textarea id="general-note" rows="3" style="width:100%; padding:14px; border-radius:8px; border:1px solid #ddd; font-family: inherit; font-size: 1rem;"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="exception">Exception Type</label>
+                                <select id="exception" style="width:100%; padding:14px; border-radius:8px; border:1px solid #ddd;">
+                                    <option value="Normal">Normal</option>
+                                    <option value="Exception">Exception</option>
+                                </select>
                             </div>
                             <button type="submit" class="btn-primary">Register Lesson</button>
                         </form>
@@ -218,6 +231,12 @@
                             <canvas id="avgTicketChart"></canvas>
                         </div>
                     </div>
+                    <div class="card" style="margin-top: 20px;">
+                        <h3>Monthly Open Lessons</h3>
+                        <div class="chart-container">
+                            <canvas id="openLessonsChart"></canvas>
+                        </div>
+                    </div>
                     <div id="stats-summary" class="stats-card">
                         <!-- Statistical Summary -->
                     </div>
@@ -225,10 +244,11 @@
 
                 <!-- RegTab Tab -->
                 <div id="tab-regtab" class="tab-pane hidden">
-                    <div class="card" style="max-width: none; overflow-x: auto; padding: 10px;">
+                    <div class="card" style="max-width: none; overflow-x: auto; padding: 10px 0;">
                         <table id="full-records-table" class="full-table">
                             <thead>
                                 <tr id="full-table-header">
+                                    <th data-sort="id">ID ↕</th>
                                     <th data-sort="date">Date ↕</th>
                                     <th data-sort="start_time">Time ↕</th>
                                     <th data-sort="duration">Dur ↕</th>
@@ -241,6 +261,7 @@
                                     <th data-sort="players_count">Play ↕</th>
                                     <th data-sort="payment_method">Method ↕</th>
                                     <th data-sort="payment_status">Status ↕</th>
+                                    <th data-sort="exception">Exc ↕</th>
                                     <th data-sort="general_note">Note ↕</th>
                                 </tr>
                             </thead>

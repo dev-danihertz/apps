@@ -53,7 +53,8 @@ body {
     #tab-graphics .card:nth-child(2), /* Weekly Frequency */
     #tab-graphics .card:nth-child(4), /* Monthly Investment */
     #tab-graphics .card:nth-child(5), /* Past vs. Upcoming */
-    #tab-graphics .card:nth-child(6)  /* Average Ticket */ {
+    #tab-graphics .card:nth-child(6), /* Average Ticket */
+    #tab-graphics .card:nth-child(7)  /* Open Lessons */ {
         grid-column: span 2;
     }
 
@@ -336,7 +337,41 @@ input:focus {
     border: 1px solid #ddd;
     padding: 8px;
     text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: clip; /* Corta a palavra sem adicionar reticências */
 }
+
+/* Ajusta largura da coluna ID */
+.full-table th:nth-child(1), .full-table td:nth-child(1) { width: 35px; }
+
+/* Ajusta largura da coluna data */
+.full-table th:nth-child(2), .full-table td:nth-child(2) { width: 100px; }
+
+/* Ajusta largura da coluna Time */
+.full-table th:nth-child(3), .full-table td:nth-child(3) { width: 68px; }
+
+/* Ajusta largura da coluna Dur */
+.full-table th:nth-child(4), .full-table td:nth-child(4) { width: 50px; }
+
+/* Ajusta as colunas restantes (5 a 14) reduzindo aproximadamente 10% */
+.full-table th:nth-child(5), .full-table td:nth-child(5) { width: 63px; }  /* Rate */
+.full-table th:nth-child(6), .full-table td:nth-child(6) { width: 72px; }  /* Total */
+.full-table th:nth-child(7), .full-table td:nth-child(7) { width: 90px; }  /* Name */
+.full-table th:nth-child(8), .full-table td:nth-child(8) { width: 36px; }  /* Mod */
+.full-table th:nth-child(9), .full-table td:nth-child(9) { width: 54px; }  /* Peak */
+.full-table th:nth-child(10), .full-table td:nth-child(10) { width: 54px; }  /* Type */
+.full-table th:nth-child(11), .full-table td:nth-child(11) { width: 45px; } /* Play */
+.full-table th:nth-child(12), .full-table td:nth-child(12) { width: 81px; } /* Method */
+.full-table th:nth-child(13), .full-table td:nth-child(13) { width: 63px; } /* Status */
+.full-table th:nth-child(14), .full-table td:nth-child(14) { width: 54px; } /* Exc */
+
+/* A última coluna (Note) ocupa o resto */
+.full-table th:nth-child(15), .full-table td:nth-child(15) {
+    width: auto;
+}
+
+
 
 .full-table th {
     background-color: #f4f4f4;
@@ -359,3 +394,14 @@ input:focus {
     background-color: #f1f1f1;
 }
 
+
+/* Telas Grandes (Laptops/Desktops 13"+) */
+@media (min-width: 1200px) {
+    #app {
+        max-width: 98%; /* Usa quase toda a largura para o RegTab */
+    }
+
+    .bottom-nav {
+        max-width: 600px; /* Mantém a navegação centralizada */
+    }
+}

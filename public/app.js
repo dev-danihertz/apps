@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const startTimeInput = document.getElementById('start-time');
     const endTimeInput = document.getElementById('end-time');
     const generalNoteInput = document.getElementById('general-note');
+    const exceptionInput = document.getElementById('exception');
 
     let editingLessonId = null;
     let monthlyChart = null;
@@ -37,6 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let comparisonChart = null;
     let avgTicketChart = null;
+    let openLessonsChart = null;
 
     const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -64,7 +66,8 @@ document.addEventListener('DOMContentLoaded', () => {
         playersInput.value = '1-1';
         paymentMethodInput.value = 'App';
         paymentOtherGroup.classList.add('hidden');
-        paymentStatusInput.value = 'Pending';
+        paymentStatusInput.value = 'Waiting';
+        exceptionInput.value = 'Normal';
         calculateTimes();
         calculateTotal();
         calculatePeakType();
@@ -168,19 +171,21 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         body.innerHTML = sorted.map(l => `
-            <tr>
+            <tr onclick="startEdit(${JSON.stringify(l).replace(/"/g, '&quot;')})" style="cursor: pointer;">
+                <td>${l.id}</td>
                 <td>${l.date}</td>
                 <td>${l.start_time}</td>
                 <td>${l.duration}h</td>
                 <td>£${parseFloat(l.coach_value).toFixed(2)}</td>
                 <td>£${parseFloat(l.total_value).toFixed(2)}</td>
                 <td>${l.name || ''}</td>
-                <td>${(l.model || '').substring(0, 3)}</td>
-                <td>${(l.peak_type || '').substring(0, 4)}</td>
-                <td>${(l.lesson_type || '').substring(0, 4)}</td>
-                <td>${(l.players_count || '').substring(0, 4)}</td>
+                <td>${l.model || ''}</td>
+                <td>${l.peak_type || ''}</td>
+                <td>${l.lesson_type || ''}</td>
+                <td>${l.players_count || ''}</td>
                 <td>${l.payment_method || ''}</td>
                 <td>${l.payment_status || ''}</td>
+                <td>${l.exception || ''}</td>
                 <td>${l.general_note || ''}</td>
             </tr>
         `).join('');
@@ -294,7 +299,8 @@ document.addEventListener('DOMContentLoaded', () => {
             payment_status: paymentStatusInput.value,
             coach_value: normalizeNumber(valueInput.value),
             duration: normalizeNumber(durationInput.value),
-            general_note: generalNoteInput.value
+            general_note: generalNoteInput.value,
+            exception: exceptionInput.value
         };
 
         const method = editingLessonId ? 'PUT' : 'POST';
@@ -412,13 +418,13 @@ document.addEventListener('DOMContentLoaded', () => {
             d.setMinutes(d.getMinutes() + (l.duration * 60));
             const endT = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
             
-            let statusColor = '#d32f2f'; 
-            if (l.payment_status === 'Paid') statusColor = '#2e7d32'; 
-            if (l.payment_status === 'Partial') statusColor = '#ff9800'; 
-            
+            let statusColor = '#d32f2f'; // Red for Waiting/Other
+            const status = (l.payment_status || '').toLowerCase();
+            if (status === 'done' || status === 'kevin' || status === 'paid') statusColor = '#1976d2'; // Blue for Done/Kevin/Paid            
             return `
                 <div class="record-row">
                     <div class="record-cell cell-date">
+                        <small style="color:var(--primary); font-weight: bold;">ID: ${l.id}</small><br>
                         ${formatDate(l.date, true)}<br>
                         <small style="color:#888">${l.start_time || '12:00'} - ${endT}</small>
                     </div>
@@ -427,6 +433,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         ${l.duration}h x £${l.coach_value} (${l.payment_method || 'N/A'})<br>
                         <small style="color:#888;">${l.players_count || '1-1'} Players, ${l.peak_type || 'Peak'} (${l.lesson_type || 'Private'})</small>
                         ${l.general_note ? `<br><small style="color:#555; font-style: italic;">Note: ${l.general_note}</small>` : ''}
+                        ${l.exception ? `<br><small style="color:#d32f2f; font-weight: bold;">Exc: ${l.exception}</small>` : ''}
                     </div>
                     <div class="record-cell cell-total">£${parseFloat(l.total_value).toFixed(2)}</div>
                     <div class="record-cell cell-actions">
@@ -445,7 +452,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('pay-lesson-id').value = lesson.id;
         document.getElementById('pay-amount').value = parseFloat(lesson.total_value).toFixed(2);
         document.getElementById('pay-method').value = lesson.payment_method || 'App';
-        document.getElementById('pay-status').value = 'Paid';
+        document.getElementById('pay-status').value = 'Done';
         payModal.classList.remove('hidden');
     };
 
@@ -466,12 +473,68 @@ document.addEventListener('DOMContentLoaded', () => {
         renderDayOfWeekChart(lessons);
         renderMonthlyFinanceChart(lessons);
         renderAvgTicketChart(lessons);
+        renderOpenLessonsChart(lessons);
         renderStatsSummary(lessons);
+    }
+
+    function renderOpenLessonsChart(lessons) {
+        const monthlyData = {};
+        // Filtrar apenas aulas do tipo 'Open'
+        const openLessons = lessons.filter(l => (l.lesson_type || '').toLowerCase().includes('open'));
+        
+        openLessons.forEach(l => {
+            const [year, month] = l.date.split('-');
+            const monthLabel = `${month}/${year}`;
+            const key = `${year}-${month}`;
+            if (!monthlyData[key]) monthlyData[key] = { label: monthLabel, count: 0 };
+            monthlyData[key].count++;
+        });
+
+        const sortedKeys = Object.keys(monthlyData).sort();
+        const ctx = document.getElementById('openLessonsChart').getContext('2d');
+        if (openLessonsChart) openLessonsChart.destroy();
+        openLessonsChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: sortedKeys.map(k => monthlyData[k].label),
+                datasets: [{
+                    label: 'Open Lessons',
+                    data: sortedKeys.map(k => monthlyData[k].count),
+                    backgroundColor: '#ffa726', // Laranja
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                ...chartOptions(true),
+                plugins: { legend: { display: false } }
+            },
+            plugins: [{
+                id: 'barValuePlugin',
+                afterDatasetsDraw(chart) {
+                    const { ctx, data } = chart;
+                    ctx.save();
+                    ctx.font = 'bold 10px sans-serif';
+                    ctx.fillStyle = '#555';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'bottom';
+                    data.datasets.forEach((dataset, i) => {
+                        const meta = chart.getDatasetMeta(i);
+                        meta.data.forEach((datapoint, index) => {
+                            ctx.fillText(dataset.data[index], datapoint.x, datapoint.y - 5);
+                        });
+                    });
+                    ctx.restore();
+                }
+            }]
+        });
     }
 
     function renderAvgTicketChart(lessons) {
         const monthlyData = {};
         lessons.forEach(l => {
+            // Filtrar para excluir aulas marcadas como 'Exception'
+            if (l.exception === 'Exception') return;
+
             const [year, month] = l.date.split('-');
             const monthLabel = `${month}/${year}`;
             const key = `${year}-${month}`;
@@ -751,7 +814,7 @@ document.addEventListener('DOMContentLoaded', () => {
         lessonTypeInput.value = lesson.lesson_type || 'Private';
         playersInput.value = lesson.players_count || '1-1';
         
-        const standardMethods = ['Bank Transfer', 'Cash', 'Card', 'App', 'Voucher', 'Membership', 'Kevin Student'];
+        const standardMethods = ['Bank Transfer', 'Cash', 'Card', 'App', 'Voucher', 'Membership', 'Kevin Student', 'Playtomic', 'Myself'];
         if (standardMethods.includes(lesson.payment_method)) {
             paymentMethodInput.value = lesson.payment_method;
             paymentOtherGroup.classList.add('hidden');
@@ -764,6 +827,7 @@ document.addEventListener('DOMContentLoaded', () => {
         paymentStatusInput.value = lesson.payment_status || 'Pending';
         valueInput.value = lesson.coach_value.toString();
         generalNoteInput.value = lesson.general_note || '';
+        exceptionInput.value = lesson.exception || '';
         calculateTimes();
         calculateTotal();
         lessonForm.querySelector('button[type="submit"]').textContent = 'Save Changes';
@@ -785,6 +849,7 @@ document.addEventListener('DOMContentLoaded', () => {
         lessonForm.querySelector('button[type="submit"]').textContent = 'Register Lesson';
         document.getElementById('cancel-edit')?.remove();
         lessonForm.parentElement.classList.remove('editing-mode');
+        exceptionInput.value = 'Normal';
     }
 
     function formatDate(dateStr, includeDay = false) {
