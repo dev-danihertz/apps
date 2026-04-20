@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const endTimeInput = document.getElementById('end-time');
     const generalNoteInput = document.getElementById('general-note');
     const exceptionInput = document.getElementById('exception');
+    const sessionStatusInput = document.getElementById('session-status');
 
     let editingLessonId = null;
     let monthlyChart = null;
@@ -68,6 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
         paymentOtherGroup.classList.add('hidden');
         paymentStatusInput.value = 'Waiting';
         exceptionInput.value = 'Normal';
+        sessionStatusInput.value = 'Planned';
         calculateTimes();
         calculateTotal();
         calculatePeakType();
@@ -185,6 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${l.players_count || ''}</td>
                 <td>${l.payment_method || ''}</td>
                 <td>${l.payment_status || ''}</td>
+                <td>${l.session_status || 'Planned'}</td>
                 <td>${l.exception || ''}</td>
                 <td>${l.general_note || ''}</td>
             </tr>
@@ -266,6 +269,68 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.readAsText(file);
     });
 
+    // Bulk Actions
+    const bulkFilterBtn = document.getElementById('bulk-filter-btn');
+    const bulkUpdateBtn = document.getElementById('bulk-update-btn');
+    let filteredResults = [];
+
+    bulkFilterBtn.addEventListener('click', async () => {
+        const res = await fetch('/api/lessons');
+        const lessons = await res.json();
+        
+        const start = document.getElementById('bulk-start').value;
+        const end = document.getElementById('bulk-end').value;
+        const name = document.getElementById('bulk-name').value.toLowerCase();
+        
+        filteredResults = lessons.filter(l => {
+            const matchDate = (!start || l.date >= start) && (!end || l.date <= end);
+            const matchName = !name || (l.name || '').toLowerCase().includes(name);
+            return matchDate && matchName;
+        });
+        
+        renderBulkPreview(filteredResults);
+    });
+
+    function renderBulkPreview(results) {
+        document.getElementById('bulk-count').textContent = results.length;
+        const body = document.getElementById('bulk-preview-body');
+        body.innerHTML = results.map(l => `
+            <tr>
+                <td>${l.id}</td>
+                <td>${l.date}</td>
+                <td>${l.name || ''}</td>
+                <td>${l.payment_status}</td>
+                <td>${l.session_status}</td>
+            </tr>
+        `).join('');
+    }
+
+    bulkUpdateBtn.addEventListener('click', async () => {
+        if (filteredResults.length === 0) return showToast('No records selected.', 'error');
+        if (!confirm(`Apply changes to ${filteredResults.length} records?`)) return;
+        
+        const payStatus = document.getElementById('bulk-pay-status').value;
+        const sessStatus = document.getElementById('bulk-session-status').value;
+        
+        if (!payStatus && !sessStatus) return showToast('Select at least one change.', 'error');
+        
+        for (const l of filteredResults) {
+            const updated = {
+                ...l,
+                payment_status: payStatus || l.payment_status,
+                session_status: sessStatus || l.session_status
+            };
+            await fetch(`/api/lessons/${l.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updated)
+            });
+        }
+        
+        showToast('Bulk update completed!');
+        loadLessons();
+    });
+
     checkSession();
     setDefaultValues();
 
@@ -300,7 +365,8 @@ document.addEventListener('DOMContentLoaded', () => {
             coach_value: normalizeNumber(valueInput.value),
             duration: normalizeNumber(durationInput.value),
             general_note: generalNoteInput.value,
-            exception: exceptionInput.value
+            exception: exceptionInput.value,
+            session_status: sessionStatusInput.value
         };
 
         const method = editingLessonId ? 'PUT' : 'POST';
@@ -331,9 +397,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const updatedData = {
             ...lesson,
-            coach_value: normalizeNumber(document.getElementById('pay-amount').value) / lesson.duration, // Mantendo a proporção rate/hour
+            coach_value: normalizeNumber(document.getElementById('pay-amount').value) / lesson.duration,
             payment_method: document.getElementById('pay-method').value,
-            payment_status: document.getElementById('pay-status').value
+            payment_status: document.getElementById('pay-status').value,
+            players_count: document.getElementById('pay-players').value,
+            session_status: document.getElementById('pay-session-status').value
         };
 
         const putRes = await fetch(`/api/lessons/${id}`, {
@@ -384,19 +452,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const today = new Date().toISOString().split('T')[0];
-        const pastLessons = lessons.filter(l => l.date <= today);
-        const futureLessons = lessons.filter(l => l.date > today);
+        const activeLessons = lessons.filter(l => (l.session_status || 'Planned') === 'Planned' || l.date > today);
+        const historyLessons = lessons.filter(l => (l.session_status || 'Planned') === 'Completed' && l.date <= today);
 
         let html = '';
 
-        if (futureLessons.length > 0) {
-            html += '<h3 style="margin-top: 10px; padding-left: 10px; color: var(--primary);">Upcoming Lessons</h3>';
-            html += renderTable(futureLessons);
+        if (activeLessons.length > 0) {
+            html += '<h3 style="margin-top: 10px; padding-left: 10px; color: var(--primary);">Planned & Upcoming</h3>';
+            html += renderTable(activeLessons);
         }
 
-        if (pastLessons.length > 0) {
-            html += '<h3 style="margin-top: 20px; padding-left: 10px; color: #666;">Past Lessons</h3>';
-            html += renderTable(pastLessons);
+        if (historyLessons.length > 0) {
+            html += '<h3 style="margin-top: 20px; padding-left: 10px; color: #666;">Completed & Past</h3>';
+            html += renderTable(historyLessons);
         }
 
         lessonsList.innerHTML = html;
@@ -437,7 +505,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <div class="record-cell cell-total">£${parseFloat(l.total_value).toFixed(2)}</div>
                     <div class="record-cell cell-actions">
-                        <button class="btn-icon btn-pay" onclick="openPayModal(${JSON.stringify(l).replace(/"/g, '&quot;')})">💰</button>
+                        <button class="btn-icon btn-pay" title="Complete/Pay" onclick="openPayModal(${JSON.stringify(l).replace(/"/g, '&quot;')})">✅</button>
+                        <button class="btn-icon btn-pay" title="Update Payment" onclick="openPayModal(${JSON.stringify(l).replace(/"/g, '&quot;')})">💰</button>
                         <button class="btn-icon btn-edit" onclick="startEdit(${JSON.stringify(l).replace(/"/g, '&quot;')})">✎</button>
                         <button class="btn-icon btn-delete" onclick="deleteLesson(${l.id})">🗑</button>
                     </div>
@@ -453,6 +522,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('pay-amount').value = parseFloat(lesson.total_value).toFixed(2);
         document.getElementById('pay-method').value = lesson.payment_method || 'App';
         document.getElementById('pay-status').value = 'Done';
+        document.getElementById('pay-players').value = lesson.players_count || '1-1';
+        document.getElementById('pay-session-status').value = 'Completed';
         payModal.classList.remove('hidden');
     };
 
@@ -828,6 +899,7 @@ document.addEventListener('DOMContentLoaded', () => {
         valueInput.value = lesson.coach_value.toString();
         generalNoteInput.value = lesson.general_note || '';
         exceptionInput.value = lesson.exception || '';
+        sessionStatusInput.value = lesson.session_status || 'Planned';
         calculateTimes();
         calculateTotal();
         lessonForm.querySelector('button[type="submit"]').textContent = 'Save Changes';
@@ -850,6 +922,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('cancel-edit')?.remove();
         lessonForm.parentElement.classList.remove('editing-mode');
         exceptionInput.value = 'Normal';
+        sessionStatusInput.value = 'Planned';
     }
 
     function formatDate(dateStr, includeDay = false) {

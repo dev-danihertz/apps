@@ -27,10 +27,11 @@ db.serialize(() => {
     start_time TEXT,
     lesson_type TEXT DEFAULT 'Private',
     payment_method TEXT,
-    payment_status TEXT DEFAULT 'Pending',
+    payment_status TEXT DEFAULT 'Waiting',
     players_count TEXT DEFAULT '1-1',
     general_note TEXT,
-    exception TEXT,
+    exception TEXT DEFAULT 'Normal',
+    session_status TEXT DEFAULT 'Planned',
     FOREIGN KEY (user_id) REFERENCES users(id)
   )`);
 

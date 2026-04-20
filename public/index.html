@@ -12,15 +12,24 @@
         <!-- Toast Notifications -->
         <div id="toast-container"></div>
 
-        <!-- Quick Pay Modal -->
+        <!-- Complete Session Modal -->
         <div id="pay-modal" class="modal hidden">
             <div class="card modal-content">
-                <h3>Declare Payment</h3>
+                <h3>Complete Session</h3>
                 <form id="pay-form">
                     <input type="hidden" id="pay-lesson-id">
                     <div class="form-group">
                         <label for="pay-amount">Amount (£)</label>
                         <input type="text" id="pay-amount" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="pay-players">Players Count</label>
+                        <select id="pay-players" style="width:100%; padding:14px; border-radius:8px; border:1px solid #ddd;">
+                            <option value="1-1">1-1</option>
+                            <option value="1-2">1-2</option>
+                            <option value="1-3">1-3</option>
+                            <option value="1-4">1-4</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label for="pay-method">Payment Method</label>
@@ -37,7 +46,7 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="pay-status">Status</label>
+                        <label for="pay-status">Payment Status</label>
                         <select id="pay-status" style="width:100%; padding:14px; border-radius:8px; border:1px solid #ddd;">
                             <option value="Waiting">Waiting</option>
                             <option value="Done">Done</option>
@@ -45,8 +54,15 @@
                             <option value="Other">Other</option>
                         </select>
                     </div>
+                    <div class="form-group">
+                        <label for="pay-session-status">Session Status</label>
+                        <select id="pay-session-status" style="width:100%; padding:14px; border-radius:8px; border:1px solid #ddd;">
+                            <option value="Planned">Planned</option>
+                            <option value="Completed">Completed</option>
+                        </select>
+                    </div>
                     <div style="display: flex; gap: 10px;">
-                        <button type="submit" class="btn-primary" style="flex: 2;">Save Payment</button>
+                        <button type="submit" class="btn-primary" style="flex: 2;">Save & Complete</button>
                         <button type="button" id="close-pay-modal" class="btn-primary btn-cancel" style="flex: 1; margin-top: 0;">Close</button>
                     </div>
                 </form>
@@ -179,6 +195,13 @@
                                     <option value="Exception">Exception</option>
                                 </select>
                             </div>
+                            <div class="form-group">
+                                <label for="session-status">Session Status</label>
+                                <select id="session-status" style="width:100%; padding:14px; border-radius:8px; border:1px solid #ddd;">
+                                    <option value="Planned">Planned</option>
+                                    <option value="Completed">Completed</option>
+                                </select>
+                            </div>
                             <button type="submit" class="btn-primary">Register Lesson</button>
                         </form>
                     </div>
@@ -261,12 +284,75 @@
                                     <th data-sort="players_count">Play ↕</th>
                                     <th data-sort="payment_method">Method ↕</th>
                                     <th data-sort="payment_status">Status ↕</th>
+                                    <th data-sort="session_status">Sess ↕</th>
                                     <th data-sort="exception">Exc ↕</th>
                                     <th data-sort="general_note">Note ↕</th>
                                 </tr>
                             </thead>
                             <tbody id="full-table-body">
                                 <!-- Data will be inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                    </div>
+                </div>
+
+                <!-- Bulk Actions Tab -->
+                <div id="tab-bulk" class="tab-pane hidden">
+                    <div class="card">
+                        <h3>Bulk Edit Filters</h3>
+                        <div class="form-group">
+                            <label>Date Range</label>
+                            <div style="display: flex; gap: 5px;">
+                                <input type="date" id="bulk-start">
+                                <input type="date" id="bulk-end">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Name Filter</label>
+                            <input type="text" id="bulk-name" placeholder="Filter by name">
+                        </div>
+                        <button id="bulk-filter-btn" class="btn-primary" style="background:#555;">Filter Records</button>
+                    </div>
+
+                    <div class="card" style="margin-top: 20px;">
+                        <h3>Apply to Filtered</h3>
+                        <div class="form-group">
+                            <label>Payment Status</label>
+                            <select id="bulk-pay-status" style="width:100%; padding:14px; border-radius:8px; border:1px solid #ddd;">
+                                <option value="">No change</option>
+                                <option value="Waiting">Waiting</option>
+                                <option value="Done">Done</option>
+                                <option value="Kevin">Kevin</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Session Status</label>
+                            <select id="bulk-session-status" style="width:100%; padding:14px; border-radius:8px; border:1px solid #ddd;">
+                                <option value="">No change</option>
+                                <option value="Planned">Planned</option>
+                                <option value="Completed">Completed</option>
+                            </select>
+                        </div>
+                        <button id="bulk-update-btn" class="btn-primary">Apply Changes</button>
+                    </div>
+
+                    <div class="card" style="margin-top: 20px; max-width: none; overflow-x: auto; padding: 10px 0;">
+                        <h3 style="padding: 0 10px;">Preview (<span id="bulk-count">0</span> records)</h3>
+                        <table class="full-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Date</th>
+                                    <th>Name</th>
+                                    <th>Payment</th>
+                                    <th>Session</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bulk-preview-body">
                             </tbody>
                         </table>
                     </div>
@@ -283,6 +369,14 @@
                     <div class="card" style="margin-top: 20px;">
                         <h3>Import Data</h3>
                         <p style="margin-bottom: 15px; color: #666; font-size: 0.9rem;">Upload a previously exported CSV file to restore your records.</p>
+                        
+                        <div style="background: #f0f0f0; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 0.8rem; border: 1px dashed #ccc;">
+                            <strong>Expected CSV Columns (Semicolon separated):</strong><br>
+                            <code style="display: block; margin-top: 5px; color: var(--primary); word-break: break-all;">
+                                date; coach_value; duration; name; model; peak_type; start_time; lesson_type; payment_method; payment_status; players_count; general_note; exception; session_status
+                            </code>
+                        </div>
+
                         <input type="file" id="import-file" accept=".csv" style="margin-bottom: 15px; border: none; padding: 0;">
                         <button id="import-btn" class="btn-primary" style="background-color: #555;">Import Backup</button>
                     </div>
@@ -310,6 +404,10 @@
                 <button class="nav-item" data-tab="data">
                     <span class="icon">💾</span>
                     <span class="label">Data</span>
+                </button>
+                <button class="nav-item" data-tab="bulk">
+                    <span class="icon">⚙️</span>
+                    <span class="label">Bulk Actions</span>
                 </button>
             </nav>
         </section>

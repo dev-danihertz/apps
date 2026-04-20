@@ -266,7 +266,7 @@ input:focus {
 
 .record-row {
     display: grid;
-    grid-template-columns: 130px 1fr 90px 105px;
+    grid-template-columns: 130px 1fr 90px 140px;
     align-items: center;
     border-bottom: 1px solid #eee;
 }
@@ -364,10 +364,11 @@ input:focus {
 .full-table th:nth-child(11), .full-table td:nth-child(11) { width: 45px; } /* Play */
 .full-table th:nth-child(12), .full-table td:nth-child(12) { width: 81px; } /* Method */
 .full-table th:nth-child(13), .full-table td:nth-child(13) { width: 63px; } /* Status */
-.full-table th:nth-child(14), .full-table td:nth-child(14) { width: 54px; } /* Exc */
+.full-table th:nth-child(14), .full-table td:nth-child(14) { width: 60px; } /* Sess */
+.full-table th:nth-child(15), .full-table td:nth-child(15) { width: 54px; } /* Exc */
 
 /* A última coluna (Note) ocupa o resto */
-.full-table th:nth-child(15), .full-table td:nth-child(15) {
+.full-table th:nth-child(16), .full-table td:nth-child(16) {
     width: auto;
 }
 
@@ -398,10 +399,35 @@ input:focus {
 /* Telas Grandes (Laptops/Desktops 13"+) */
 @media (min-width: 1200px) {
     #app {
-        max-width: 98%; /* Usa quase toda a largura para o RegTab */
+        max-width: 900px; /* Tamanho de Tablet padrão para o app */
+    }
+
+    /* Somente o RegTab pode expandir para a largura total */
+    body:has(.nav-item[data-tab="regtab"].active) #app {
+        max-width: 98%;
     }
 
     .bottom-nav {
         max-width: 600px; /* Mantém a navegação centralizada */
     }
+}
+
+/* Destaque para o campo Nome na tela de Insert */
+#name {
+    color: var(--primary);
+    font-weight: 700;
+    font-size: 1.1rem;
+    border: 2px solid rgba(46, 125, 50, 0.3);
+}
+
+#name::placeholder {
+    font-weight: 400;
+    color: #bbb;
+}
+
+/* Destaque para o rótulo do campo Nome */
+label[for="name"] {
+    color: var(--primary);
+    font-weight: 700;
+    font-size: 1rem;
 }
