@@ -90,15 +90,41 @@
 
         <!-- Main Screen with Tabs -->
         <section id="dashboard-screen" class="screen hidden">
-            <header>
-                <h2 id="tab-title">Insert Lesson</h2>
-                <button id="logout-btn" class="btn-text">Logout</button>
+            <header style="display: flex; justify-content: space-between; align-items: center; padding: 10px 15px;">
+                <h2 id="tab-title" style="margin: 0;">Dashboard</h2>
+                <div style="display: flex; gap: 15px; align-items: center;">
+                    <button id="toggle-privacy-btn" class="btn-text" style="font-size: 1.2rem; padding: 5px;" title="Toggle Privacy">👁️</button>
+                    <button id="logout-btn" class="btn-text">Logout</button>
+                </div>
             </header>
             
             <!-- Tab Content -->
             <div id="tab-content">
+                <!-- Dashboard Tab -->
+                <div id="tab-dashboard" class="tab-pane">
+                    <div class="card">
+                        <h3>Current Month Overview</h3>
+                        <p style="text-align: center; color: #666; font-size: 0.9rem; margin-bottom: 10px;" id="current-month-label"></p>
+                        <div class="chart-container" style="height: 250px;">
+                            <canvas id="currentMonthDoughnut"></canvas>
+                        </div>
+                        <div id="month-stats-summary" style="margin-top: 15px; text-align: center; font-weight: bold; color: var(--primary);">
+                        </div>
+                        <div id="month-financial-summary" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee; text-align: center;">
+                            <!-- Financial info will be inserted here -->
+                        </div>
+                    </div>
+                    
+                    <div class="card" style="margin-top: 20px;">
+                        <h3 style="margin-bottom: 15px;">Next 7 Days</h3>
+                        <div id="upcoming-7days-list" style="display: flex; flex-direction: column; gap: 10px;">
+                            <!-- Upcoming sessions list -->
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Insert Tab -->
-                <div id="tab-insert" class="tab-pane">
+                <div id="tab-insert" class="tab-pane hidden">
                     <div class="card">
                         <form id="lesson-form">
                             <div class="form-group">
@@ -131,7 +157,10 @@
                             </div>
                             <div class="form-group">
                                 <label for="model">Model</label>
-                                <input type="text" id="model" value="KG Academy">
+                                <select id="model" style="width:100%; padding:14px; border-radius:8px; border:1px solid #ddd;">
+                                    <option value="KG Academy">KG Academy</option>
+                                    <option value="Before KG">Before KG</option>
+                                </select>
                             </div>
                             <div class="form-group">
                                 <label for="peak-type">Schedule Type</label>
@@ -260,6 +289,18 @@
                             <canvas id="openLessonsChart"></canvas>
                         </div>
                     </div>
+                    <div class="card" style="margin-top: 20px;">
+                        <h3>Lessons by Player Count</h3>
+                        <div class="chart-container">
+                            <canvas id="playersChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-top: 20px;">
+                        <h3>Distribuição por Tipo de Aula</h3>
+                        <div class="chart-container">
+                            <canvas id="lessonTypeChart"></canvas>
+                        </div>
+                    </div>
                     <div id="stats-summary" class="stats-card">
                         <!-- Statistical Summary -->
                     </div>
@@ -296,9 +337,6 @@
                     </div>
                 </div>
 
-                    </div>
-                </div>
-
                 <!-- Bulk Actions Tab -->
                 <div id="tab-bulk" class="tab-pane hidden">
                     <div class="card">
@@ -311,50 +349,116 @@
                             </div>
                         </div>
                         <div class="form-group">
-                            <label>Name Filter</label>
-                            <input type="text" id="bulk-name" placeholder="Filter by name">
+                            <label>Name (optional)</label>
+                            <input type="text" id="bulk-name" placeholder="Filter by name...">
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <div class="form-group">
+                                <label>Payment Status</label>
+                                <select id="filter-bulk-pay-status">
+                                    <option value="">All</option>
+                                    <option value="Paid">Paid</option>
+                                    <option value="Waiting">Waiting</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Session Status</label>
+                                <select id="filter-bulk-session-status">
+                                    <option value="">All</option>
+                                    <option value="Planned">Planned</option>
+                                    <option value="Completed">Completed</option>
+                                    <option value="Canceled">Canceled</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Duration (h)</label>
+                                <input type="number" id="filter-bulk-duration" step="0.5" placeholder="All">
+                            </div>
+                            <div class="form-group">
+                                <label>Modelo</label>
+                                <select id="filter-bulk-model">
+                                    <option value="">Todos</option>
+                                    <option value="KG Academy">KG Academy</option>
+                                    <option value="Before KG">Before KG</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Players</label>
+                                <select id="filter-bulk-players">
+                                    <option value="">All</option>
+                                    <option value="1-1">1-1</option>
+                                    <option value="1-2">1-2</option>
+                                    <option value="1-3">1-3</option>
+                                    <option value="1-4">1-4</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Peak Time</label>
+                                <select id="filter-bulk-peak">
+                                    <option value="">All</option>
+                                    <option value="Peak">Peak</option>
+                                    <option value="Off Peak">Off Peak</option>
+                                </select>
+                            </div>
                         </div>
                         <button id="bulk-filter-btn" class="btn-primary" style="background:#555;">Filter Records</button>
                     </div>
 
-                    <div class="card" style="margin-top: 20px;">
-                        <h3>Apply to Filtered</h3>
-                        <div class="form-group">
-                            <label>Payment Status</label>
-                            <select id="bulk-pay-status" style="width:100%; padding:14px; border-radius:8px; border:1px solid #ddd;">
-                                <option value="">No change</option>
-                                <option value="Waiting">Waiting</option>
-                                <option value="Done">Done</option>
-                                <option value="Kevin">Kevin</option>
-                                <option value="Other">Other</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Session Status</label>
-                            <select id="bulk-session-status" style="width:100%; padding:14px; border-radius:8px; border:1px solid #ddd;">
-                                <option value="">No change</option>
-                                <option value="Planned">Planned</option>
-                                <option value="Completed">Completed</option>
-                            </select>
-                        </div>
-                        <button id="bulk-update-btn" class="btn-primary">Apply Changes</button>
-                    </div>
-
                     <div class="card" style="margin-top: 20px; max-width: none; overflow-x: auto; padding: 10px 0;">
-                        <h3 style="padding: 0 10px;">Preview (<span id="bulk-count">0</span> records)</h3>
-                        <table class="full-table">
+                        <h3 style="padding: 0 10px;">Preview (<span id="bulk-count">0</span> registros)</h3>
+                        <table class="full-table bulk-table">
                             <thead>
                                 <tr>
+                                    <th><input type="checkbox" id="bulk-select-all"></th>
                                     <th>ID</th>
-                                    <th>Date</th>
-                                    <th>Name</th>
-                                    <th>Payment</th>
-                                    <th>Session</th>
+                                    <th>Data</th>
+                                    <th>Hora</th>
+                                    <th>Dur</th>
+                                    <th>Rate</th>
+                                    <th>Total</th>
+                                    <th>Nome</th>
+                                    <th>Mod</th>
+                                    <th>Pico</th>
+                                    <th>Tipo</th>
+                                    <th>Play</th>
+                                    <th>Metodo</th>
+                                    <th>Status</th>
+                                    <th>Sess</th>
+                                    <th>Exc</th>
+                                    <th>Note</th>
                                 </tr>
                             </thead>
                             <tbody id="bulk-preview-body">
                             </tbody>
                         </table>
+                    </div>
+
+                    <div id="bulk-action-trigger-container" class="hidden" style="margin-top: 20px; text-align: center;">
+                        <button id="btn-show-bulk-update" class="btn-primary" style="background: var(--primary-light); max-width: 250px;">Alterar registro</button>
+                    </div>
+
+                    <div id="bulk-update-section" class="card hidden" style="margin-top: 20px;">
+                        <h3>Atualizar Registros Selecionados</h3>
+                        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                            <div class="form-group" style="flex: 1;">
+                                <label>Novo Status Pagamento</label>
+                                <select id="bulk-pay-status">
+                                    <option value="">Sem alteração</option>
+                                    <option value="Paid">Paid</option>
+                                    <option value="Waiting">Waiting</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label>Novo Status Sessão</label>
+                                <select id="bulk-session-status">
+                                    <option value="">Sem alteração</option>
+                                    <option value="Planned">Planned</option>
+                                    <option value="Completed">Completed</option>
+                                    <option value="Canceled">Canceled</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button id="bulk-update-btn" class="btn-primary">Aplicar Alterações</button>
                     </div>
                 </div>
 
@@ -385,7 +489,11 @@
 
             <!-- Bottom Navigation -->
             <nav class="bottom-nav">
-                <button class="nav-item active" data-tab="insert">
+                <button class="nav-item active" data-tab="dashboard">
+                    <span class="icon">🏠</span>
+                    <span class="label">Dash</span>
+                </button>
+                <button class="nav-item" data-tab="insert">
                     <span class="icon">➕</span>
                     <span class="label">Insert</span>
                 </button>

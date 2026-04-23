@@ -151,6 +151,7 @@ body {
 
 .toast.success { background: var(--primary); }
 .toast.error { background: var(--error); }
+.toast.warning { background: #fbc02d; color: #333; }
 
 @keyframes slideDown {
     from { transform: translateY(-100%); opacity: 0; }
@@ -179,9 +180,11 @@ header {
     justify-content: space-between;
     align-items: center;
     padding: 10px 0;
+    width: 100%;
 }
 
-h2 { font-size: 1.5rem; margin-bottom: 15px; }
+h2 { font-size: 1.5rem; margin-bottom: 0; }
+.card h2 { margin-bottom: 15px; }
 h3 { margin-bottom: 10px; color: #666; font-size: 1.1rem; }
 
 .form-group {
@@ -202,6 +205,13 @@ input {
     border-radius: 8px;
     font-size: 1rem;
     -webkit-appearance: none;
+}
+
+input[type="checkbox"] {
+    width: auto;
+    padding: 0;
+    -webkit-appearance: checkbox;
+    appearance: checkbox;
 }
 
 input:focus {
@@ -299,6 +309,41 @@ input:focus {
     background-color: #e8f5e9;
 }
 
+#tab-bulk {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    gap: 20px;
+}
+
+#tab-bulk .card {
+    width: 100%;
+    max-width: 500px; /* Mantém os filtros centralizados e não muito largos */
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* A tabela de preview pode ser mais larga em telas maiores */
+#tab-bulk .card:has(.full-table) {
+    max-width: 100%;
+}
+
+/* Ajustes para Tablets (10 polegadas+) e Desktops */
+@media (min-width: 768px) {
+    #tab-bulk {
+        padding: 20px;
+    }
+    
+    #tab-bulk .card {
+        max-width: 600px;
+    }
+
+    #tab-bulk .card:has(.full-table) {
+        max-width: 95%;
+    }
+}
+
 .btn-cancel {
     margin-top: 10px;
     background-color: #9e9e9e;
@@ -345,8 +390,18 @@ input:focus {
 /* Ajusta largura da coluna ID */
 .full-table th:nth-child(1), .full-table td:nth-child(1) { width: 35px; }
 
+/* Ajuste específico para a Bulk Table que tem checkbox na frente */
+.bulk-table th:nth-child(1), .bulk-table td:nth-child(1) { 
+    width: 30px; 
+    min-width: 30px;
+    text-align: center; 
+    overflow: visible;
+}
+.bulk-table th:nth-child(2), .bulk-table td:nth-child(2) { width: 35px; } /* ID */
+.bulk-table th:nth-child(3), .bulk-table td:nth-child(3) { width: 100px; } /* Date */
+
 /* Ajusta largura da coluna data */
-.full-table th:nth-child(2), .full-table td:nth-child(2) { width: 100px; }
+.full-table:not(.bulk-table) th:nth-child(2), .full-table:not(.bulk-table) td:nth-child(2) { width: 100px; }
 
 /* Ajusta largura da coluna Time */
 .full-table th:nth-child(3), .full-table td:nth-child(3) { width: 68px; }
@@ -400,10 +455,13 @@ input:focus {
 @media (min-width: 1200px) {
     #app {
         max-width: 900px; /* Tamanho de Tablet padrão para o app */
+        margin-left: auto;
+        margin-right: auto;
     }
 
-    /* Somente o RegTab pode expandir para a largura total */
-    body:has(.nav-item[data-tab="regtab"].active) #app {
+    /* Somente o RegTab e Bulk podem expandir para a largura total */
+    body:has(.nav-item[data-tab="regtab"].active) #app,
+    body:has(.nav-item[data-tab="bulk"].active) #app {
         max-width: 98%;
     }
 
