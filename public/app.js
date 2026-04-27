@@ -388,12 +388,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         body.innerHTML = results.map(l => {
-            const isEditable = l.session_status === 'Planned' || l.session_status === 'Completed';
             const totalValue = l.coach_value * l.duration;
             return `
-                <tr style="${isEditable ? '' : 'opacity: 0.5; background: #f9f9f9;'}">
+                <tr>
                     <td>
-                        <input type="checkbox" class="bulk-item-checkbox" data-id="${l.id}" ${isEditable ? '' : 'disabled'}>
+                        <input type="checkbox" class="bulk-item-checkbox" data-id="${l.id}">
                     </td>
                     <td>${l.id}</td>
                     <td>${l.date}</td>
@@ -401,7 +400,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${l.duration}h</td>
                     <td>${isPrivate ? '***' : l.coach_value}</td>
                     <td>${isPrivate ? '***' : totalValue}</td>
-                    <td>${l.client_name || ''} ${isEditable ? '' : '<small>(Non-editable)</small>'}</td>
+                    <td>${l.client_name || ''}</td>
                     <td>${l.model || ''}</td>
                     <td>${l.peak_type || ''}</td>
                     <td>${l.lesson_type || ''}</td>
@@ -486,6 +485,33 @@ document.addEventListener('DOMContentLoaded', () => {
             loadLessons(); // Refresh data
         } catch (err) {
             showToast('Erro durante a atualização em massa: ' + err.message, 'error');
+        }
+    });
+
+    document.getElementById('bulk-delete-btn')?.addEventListener('click', async () => {
+        const selectedCheckboxes = document.querySelectorAll('.bulk-item-checkbox:checked');
+        const selectedIds = Array.from(selectedCheckboxes).map(cb => parseInt(cb.getAttribute('data-id')));
+
+        if (selectedIds.length === 0) return showToast('Nenhum registro selecionado para exclusão.', 'warning');
+
+        if (!confirm(`TEM CERTEZA que deseja APAGAR permanentemente ${selectedIds.length} registros selecionados?`)) return;
+
+        try {
+            for (const id of selectedIds) {
+                await fetch(`/api/lessons/${id}`, { method: 'DELETE' });
+            }
+            showToast(`${selectedIds.length} registros apagados com sucesso!`);
+            
+            // Refresh UI
+            bulkActionTriggerContainer?.classList.add('hidden');
+            bulkUpdateSection?.classList.add('hidden');
+            document.getElementById('bulk-select-all').checked = false;
+            
+            // Re-run filter to update the bulk view
+            bulkFilterBtn.click();
+            loadLessons(); // Refresh dashboard/records
+        } catch (err) {
+            showToast('Erro durante a exclusão em massa: ' + err.message, 'error');
         }
     });
 
