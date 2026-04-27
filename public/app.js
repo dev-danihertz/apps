@@ -14,6 +14,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const tabPanes = document.querySelectorAll('.tab-pane');
     const tabTitle = document.getElementById('tab-title');
     const toastContainer = document.getElementById('toast-container');
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const loadingText = document.getElementById('loading-text');
+
+    function showLoading(text = 'Processing...') {
+        loadingText.textContent = text;
+        loadingOverlay.classList.remove('hidden');
+    }
+
+    function hideLoading() {
+        loadingOverlay.classList.add('hidden');
+    }
     
     const valueInput = document.getElementById('value');
     const durationInput = document.getElementById('duration');
@@ -460,6 +471,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!confirm(`Aplicar alterações a ${selectedIds.length} registros selecionados?`)) return;
         
+        showLoading(`Updating ${selectedIds.length} records...`);
         try {
             // Find the full lesson objects for the selected IDs
             const lessonsToUpdate = filteredResults.filter(l => selectedIds.includes(l.id));
@@ -478,13 +490,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             showToast('Atualização em massa concluída!');
-            bulkUpdateSection?.classList.add('hidden');
-            bulkActionTriggerContainer?.classList.add('hidden');
-            // Clear selections
-            document.getElementById('bulk-select-all').checked = false;
-            loadLessons(); // Refresh data
+            // Refresh current view without hiding everything
+            bulkFilterBtn.click();
+            loadLessons(); // Refresh background data
         } catch (err) {
             showToast('Erro durante a atualização em massa: ' + err.message, 'error');
+        } finally {
+            hideLoading();
         }
     });
 
@@ -496,22 +508,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!confirm(`TEM CERTEZA que deseja APAGAR permanentemente ${selectedIds.length} registros selecionados?`)) return;
 
+        showLoading(`Deleting ${selectedIds.length} records...`);
         try {
             for (const id of selectedIds) {
                 await fetch(`/api/lessons/${id}`, { method: 'DELETE' });
             }
             showToast(`${selectedIds.length} registros apagados com sucesso!`);
             
-            // Refresh UI
-            bulkActionTriggerContainer?.classList.add('hidden');
-            bulkUpdateSection?.classList.add('hidden');
+            // Refresh current view
             document.getElementById('bulk-select-all').checked = false;
-            
-            // Re-run filter to update the bulk view
             bulkFilterBtn.click();
-            loadLessons(); // Refresh dashboard/records
+            loadLessons(); // Refresh background data
         } catch (err) {
             showToast('Erro durante a exclusão em massa: ' + err.message, 'error');
+        } finally {
+            hideLoading();
         }
     });
 
