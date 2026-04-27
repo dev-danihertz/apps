@@ -812,10 +812,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderTable(lessonList) {
         let tableHTML = `
             <div class="records-table">
-                <div class="record-row records-header">
-                    <div class="record-cell" style="flex: 2;">Lesson Details</div>
-                    <div class="record-cell" style="text-align:right; flex: 1;">Total</div>
-                    <div class="record-cell" style="flex: 1;">Actions</div>
+                <div class="record-row records-header" style="padding: 10px 5px;">
+                    <div class="record-cell" style="flex: 3;">Lesson Details</div>
+                    <div class="record-cell" style="text-align:right; flex: 1.2;">Total</div>
+                    <div class="record-cell" style="text-align:right; flex: 0.8; padding-right: 5px;">Actions</div>
                 </div>
         `;
         tableHTML += lessonList.map(l => {
@@ -828,29 +828,29 @@ document.addEventListener('DOMContentLoaded', () => {
             if (status === 'done' || status === 'kevin' || status === 'paid') statusColor = '#1976d2'; 
             
             return `
-                <div class="record-row" style="align-items: center;">
-                    <div class="record-cell cell-combined" style="flex: 2; line-height: 1.4;">
-                        <div style="margin-bottom: 4px;">
+                <div class="record-row" style="align-items: center; padding: 12px 5px; border-bottom: 1px solid #eee;">
+                    <div class="record-cell cell-combined" style="flex: 3; line-height: 1.4; min-width: 0;">
+                        <div style="margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                             <small style="color:var(--primary); font-weight: bold;">#${l.id}</small>
                             <span style="font-weight: bold; margin-left: 5px;">${formatDate(l.date, true)}</span>
                         </div>
                         <div style="font-size: 0.85rem; color: #666; margin-bottom: 4px;">
                             ${l.start_time || '12:00'} - ${endT} (${l.duration}h)
                         </div>
-                        <div style="font-size: 1rem; font-weight: bold; color: #333;">
+                        <div style="font-size: 1.05rem; font-weight: bold; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                             ${l.client_name || 'Anonymous'}
                         </div>
                         <div style="font-size: 0.8rem; color: #888;">
-                            <span style="color:${statusColor}; font-weight: bold;">${l.payment_status}</span> • ${l.payment_method || 'N/A'} • ${l.players_count}
+                            <span style="color:${statusColor}; font-weight: bold;">${l.payment_status}</span> • ${l.payment_method || 'N/A'}
                         </div>
                     </div>
-                    <div class="record-cell cell-total" style="text-align:right; flex: 1; font-weight: bold; font-size: 1.1rem;">
+                    <div class="record-cell cell-total" style="text-align:right; flex: 1.2; font-weight: bold; font-size: 1.15rem; color: #333; white-space: nowrap; padding: 0 5px;">
                         £${parseFloat(l.total_value).toFixed(2)}
                     </div>
-                    <div class="record-cell cell-actions" style="flex: 1; display: flex; justify-content: flex-end; gap: 4px;">
-                        <button class="btn-icon btn-pay" title="Update Payment" onclick="openPayModal(${JSON.stringify(l).replace(/"/g, '&quot;')})">💰</button>
-                        <button class="btn-icon btn-edit" onclick="startEdit(${JSON.stringify(l).replace(/"/g, '&quot;')})">✎</button>
-                        <button class="btn-icon btn-delete" onclick="deleteLesson(${l.id})">🗑</button>
+                    <div class="record-cell cell-actions" style="flex: 0.8; display: flex; justify-content: flex-end; gap: 2px; padding-right: 2px;">
+                        <button class="btn-icon btn-pay" title="Update Payment" style="padding: 4px;" onclick="openPayModal(${JSON.stringify(l).replace(/"/g, '&quot;')})">💰</button>
+                        <button class="btn-icon btn-edit" style="padding: 4px;" onclick="startEdit(${JSON.stringify(l).replace(/"/g, '&quot;')})">✎</button>
+                        <button class="btn-icon btn-delete" style="padding: 4px;" onclick="deleteLesson(${l.id})">🗑</button>
                     </div>
                 </div>
             `;
