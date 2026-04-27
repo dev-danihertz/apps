@@ -489,3 +489,4 @@ label[for="name"] {
     font-weight: 700;
     font-size: 1rem;
 }
+.version-info { text-align: center; font-size: 0.7rem; color: #aaa; margin-top: 30px; padding-bottom: 20px; font-style: italic; }
