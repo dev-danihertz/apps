@@ -33,7 +33,21 @@ db.serialize(() => {
     exception TEXT DEFAULT 'Normal',
     session_status TEXT DEFAULT 'Planned',
     FOREIGN KEY (user_id) REFERENCES users(id)
-  )`);
+  )`, (err) => {
+    if (!err) {
+      // Migração: Verificar se a coluna 'name' ainda existe e renomear para 'client_name'
+      db.all("PRAGMA table_info(lessons)", (err, columns) => {
+        if (!err) {
+          const hasName = columns.some(c => c.name === 'name');
+          const hasClientName = columns.some(c => c.name === 'client_name');
+          if (hasName && !hasClientName) {
+            console.log("Migrando coluna 'name' para 'client_name'...");
+            db.run("ALTER TABLE lessons RENAME COLUMN name TO client_name;");
+          }
+        }
+      });
+    }
+  });
 
   // Usuário padrão: admin / 1243
   const email = 'admin';
