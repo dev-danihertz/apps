@@ -21,7 +21,7 @@ db.serialize(() => {
     date TEXT NOT NULL,
     coach_value REAL NOT NULL,
     duration REAL DEFAULT 1,
-    name TEXT,
+    client_name TEXT,
     model TEXT DEFAULT 'KG Academy',
     peak_type TEXT,
     start_time TEXT,

@@ -22,7 +22,7 @@ const endDate = new Date('2026-04-20');
 
 db.serialize(() => {
     const stmt = db.prepare(`INSERT INTO lessons (
-        user_id, date, coach_value, duration, name, model, peak_type, start_time, 
+        user_id, date, coach_value, duration, client_name, model, peak_type, start_time, 
         lesson_type, payment_method, payment_status, players_count, general_note, 
         exception, session_status
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
@@ -37,7 +37,7 @@ db.serialize(() => {
         
         const coachValue = getRandom(coachValues);
         const duration = getRandom(durations);
-        const name = getRandom(names);
+        const client_name = getRandom(names);
         const model = getRandom(models);
         const peakType = getRandom(peakTypes);
         const lessonType = getRandom(lessonTypes);
@@ -51,7 +51,7 @@ db.serialize(() => {
             dateStr,
             coachValue,
             duration,
-            name,
+            client_name,
             model,
             peakType,
             startTime,

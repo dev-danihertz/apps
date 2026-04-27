@@ -15,7 +15,7 @@ app.use((req, res, next) => {
 
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
-app.use(bodyParser.text({ type: 'text/csv', limit: '50mb' }));
+app.use(bodyParser.text({ type: ['text/csv', 'text/plain'], limit: '50mb' }));
 app.use(session({
   secret: 'padel-secret-key',
   resave: false,
@@ -63,7 +63,7 @@ app.get('/api/check-session', (req, res) => {
 });
 
 app.post('/api/lessons', isAuthenticated, (req, res) => {
-  const { date, coach_value, duration, name, model, peak_type, start_time, lesson_type, payment_method, payment_status, players_count, general_note, exception, session_status } = req.body;
+  const { date, coach_value, duration, client_name, model, peak_type, start_time, lesson_type, payment_method, payment_status, players_count, general_note, exception, session_status } = req.body;
   const userId = req.session.userId;
   
   console.log('Saving new lesson:', req.body); // LOG PARA DEBUG
@@ -72,8 +72,8 @@ app.post('/api/lessons', isAuthenticated, (req, res) => {
     return res.status(400).json({ error: 'Date and value are required' });
   }
 
-  db.run("INSERT INTO lessons (user_id, date, coach_value, duration, name, model, peak_type, start_time, lesson_type, payment_method, payment_status, players_count, general_note, exception, session_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", 
-    [userId, date, coach_value, duration || 1, name || '', model || 'KG Academy', peak_type, start_time, lesson_type || 'Private', payment_method || 'App', payment_status || 'Waiting', players_count || '1-1', general_note || '', exception || 'Normal', session_status || 'Planned'], 
+  db.run("INSERT INTO lessons (user_id, date, coach_value, duration, client_name, model, peak_type, start_time, lesson_type, payment_method, payment_status, players_count, general_note, exception, session_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", 
+    [userId, date, coach_value, duration || 1, client_name || '', model || 'KG Academy', peak_type, start_time, lesson_type || 'Private', payment_method || 'App', payment_status || 'Waiting', players_count || '1-1', general_note || '', exception || 'Normal', session_status || 'Planned'], 
     function(err) {
       if (err) {
         console.error('Error saving lesson:', err.message);
@@ -93,14 +93,14 @@ app.get('/api/lessons', isAuthenticated, (req, res) => {
 });
 
 app.put('/api/lessons/:id', isAuthenticated, (req, res) => {
-  const { date, coach_value, duration, name, model, peak_type, start_time, lesson_type, payment_method, payment_status, players_count, general_note, exception, session_status } = req.body;
+  const { date, coach_value, duration, client_name, model, peak_type, start_time, lesson_type, payment_method, payment_status, players_count, general_note, exception, session_status } = req.body;
   const { id } = req.params;
   const userId = req.session.userId;
 
   console.log('Updating lesson:', id, req.body); // LOG PARA DEBUG
 
-  db.run("UPDATE lessons SET date = ?, coach_value = ?, duration = ?, name = ?, model = ?, peak_type = ?, start_time = ?, lesson_type = ?, payment_method = ?, payment_status = ?, players_count = ?, general_note = ?, exception = ?, session_status = ? WHERE id = ? AND user_id = ?", 
-    [date, coach_value, duration, name || '', model, peak_type, start_time, lesson_type, payment_method, payment_status, players_count, general_note || '', exception || 'Normal', session_status || 'Planned', id, userId], 
+  db.run("UPDATE lessons SET date = ?, coach_value = ?, duration = ?, client_name = ?, model = ?, peak_type = ?, start_time = ?, lesson_type = ?, payment_method = ?, payment_status = ?, players_count = ?, general_note = ?, exception = ?, session_status = ? WHERE id = ? AND user_id = ?", 
+    [date, coach_value, duration, client_name || '', model, peak_type, start_time, lesson_type, payment_method, payment_status, players_count, general_note || '', exception || 'Normal', session_status || 'Planned', id, userId], 
     function(err) {
       if (err) {
         console.error('Error updating lesson:', err.message);
@@ -125,19 +125,20 @@ app.get('/api/export', isAuthenticated, (req, res) => {
   db.all("SELECT * FROM lessons WHERE user_id = ?", [userId], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     
-    const headers = ['date', 'coach_value', 'duration', 'name', 'model', 'peak_type', 'start_time', 'lesson_type', 'payment_method', 'payment_status', 'players_count', 'general_note', 'exception', 'session_status'];
-    let csv = headers.join(';') + '\n';
+    // Requested order: date, start_time, peak_type, coach_value, duration, client_name, model, lesson_type, players_count, payment_method, payment_status, session_status, exception, general_note
+    const csvHeaders = ['date', 'start_time', 'peak_type', 'coach_value', 'duration', 'client_name', 'model', 'lesson_type', 'players_count', 'payment_method', 'payment_status', 'session_status', 'exception', 'general_note'];
+    let csv = csvHeaders.join(',') + '\n';
     
     rows.forEach(row => {
-      const line = headers.map(header => {
+      const line = csvHeaders.map(header => {
         let val = row[header] === null || row[header] === undefined ? '' : row[header];
-        // Escape semicolons and newlines
+        // Escape commas and newlines
         if (typeof val === 'string') {
-          val = val.replace(/;/g, ',').replace(/\n/g, ' ');
+          val = val.replace(/,/g, ' ').replace(/\n/g, ' ');
         }
         return val;
       });
-      csv += line.join(';') + '\n';
+      csv += line.join(',') + '\n';
     });
 
     res.setHeader('Content-Type', 'text/csv');
@@ -163,9 +164,9 @@ app.post('/api/import', isAuthenticated, (req, res) => {
     return res.status(400).json({ error: 'CSV file is empty or missing headers.' });
   }
 
-  const headers = lines[0].split(';');
+  const headers = lines[0].split(',');
   const lessons = lines.slice(1).map(line => {
-    const values = line.split(';');
+    const values = line.split(',');
     const lesson = {};
     headers.forEach((header, index) => {
       lesson[header.trim()] = values[index] ? values[index].trim() : '';
@@ -174,7 +175,7 @@ app.post('/api/import', isAuthenticated, (req, res) => {
   });
 
   db.serialize(() => {
-    const stmt = db.prepare("INSERT INTO lessons (user_id, date, coach_value, duration, name, model, peak_type, start_time, lesson_type, payment_method, payment_status, players_count, general_note, exception, session_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    const stmt = db.prepare("INSERT INTO lessons (user_id, date, coach_value, duration, client_name, model, peak_type, start_time, lesson_type, payment_method, payment_status, players_count, general_note, exception, session_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     
     let errorOccurred = false;
     lessons.forEach(lesson => {
@@ -183,7 +184,7 @@ app.post('/api/import', isAuthenticated, (req, res) => {
         lesson.date,
         parseFloat(lesson.coach_value) || 0,
         parseFloat(lesson.duration) || 1,
-        lesson.name,
+        lesson.client_name,
         lesson.model,
         lesson.peak_type,
         lesson.start_time,

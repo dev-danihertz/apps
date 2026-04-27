@@ -248,13 +248,18 @@ document.addEventListener('DOMContentLoaded', () => {
             let valB = b[currentSort.column];
             
             // Handle numeric values
-            if (['duration', 'coach_value', 'total_value'].includes(currentSort.column)) {
+            if (['id', 'duration', 'coach_value', 'total_value'].includes(currentSort.column)) {
                 valA = parseFloat(valA) || 0;
                 valB = parseFloat(valB) || 0;
             }
 
             if (valA < valB) return currentSort.direction === 'asc' ? -1 : 1;
             if (valA > valB) return currentSort.direction === 'asc' ? 1 : -1;
+            
+            // If values are equal (like same date), sort by ID descending to show newest first
+            if (currentSort.column !== 'id') {
+                return b.id - a.id;
+            }
             return 0;
         });
 
@@ -266,7 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${l.duration}h</td>
                 <td>£${parseFloat(l.coach_value).toFixed(2)}</td>
                 <td>£${parseFloat(l.total_value).toFixed(2)}</td>
-                <td>${l.name || ''}</td>
+                <td>${l.client_name || ''}</td>
                 <td>${l.model || ''}</td>
                 <td>${l.peak_type || ''}</td>
                 <td>${l.lesson_type || ''}</td>
@@ -276,6 +281,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${l.session_status || 'Planned'}</td>
                 <td>${l.exception || ''}</td>
                 <td>${l.general_note || ''}</td>
+                <td>
+                    <button class="btn-icon btn-delete" onclick="event.stopPropagation(); deleteLesson(${l.id})">🗑</button>
+                </td>
             </tr>
         `).join('');
     }
@@ -333,7 +341,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!l.date) return false;
                 const lessonDate = l.date.split('T')[0]; 
                 const matchesDate = (lessonDate >= start) && (lessonDate <= end);
-                const matchesName = !filterName || (l.name || '').toLowerCase().includes(filterName);
+                const matchesName = !filterName || (l.client_name || '').toLowerCase().includes(filterName);
                 const matchesPay = !filterPayStatus || l.payment_status === filterPayStatus;
                 const matchesSess = !filterSessStatus || l.session_status === filterSessStatus;
                 const matchesDuration = !filterDuration || parseFloat(l.duration) === parseFloat(filterDuration);
@@ -393,7 +401,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${l.duration}h</td>
                     <td>${isPrivate ? '***' : l.coach_value}</td>
                     <td>${isPrivate ? '***' : totalValue}</td>
-                    <td>${l.name || ''} ${isEditable ? '' : '<small>(Non-editable)</small>'}</td>
+                    <td>${l.client_name || ''} ${isEditable ? '' : '<small>(Non-editable)</small>'}</td>
                     <td>${l.model || ''}</td>
                     <td>${l.peak_type || ''}</td>
                     <td>${l.lesson_type || ''}</td>
@@ -528,7 +536,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const lessonData = {
             date: document.getElementById('date').value,
             start_time: startTimeInput.value,
-            name: nameInput.value,
+            client_name: nameInput.value,
             model: modelInput.value,
             peak_type: peakInput.value,
             lesson_type: lessonTypeInput.value,
@@ -683,7 +691,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span style="color: #888; font-size: 0.8rem; margin-left: 5px;">${dateParts[2]}/${dateParts[1]}</span>
                         </div>
                         <div style="flex: 2; text-align: right; font-weight: 500; color: var(--primary);">
-                            ${l.name || 'Anonymous'} <span style="font-size: 0.75rem; color: #999;">(${l.start_time})</span>
+                            ${l.client_name || 'Anonymous'} <span style="font-size: 0.75rem; color: #999;">(${l.start_time})</span>
                         </div>
                     </div>
                 `;
@@ -779,10 +787,9 @@ document.addEventListener('DOMContentLoaded', () => {
         let tableHTML = `
             <div class="records-table">
                 <div class="record-row records-header">
-                    <div class="record-cell">Date/Time</div>
-                    <div class="record-cell">Info/Name</div>
-                    <div class="record-cell" style="text-align:right">Total</div>
-                    <div class="record-cell"></div>
+                    <div class="record-cell" style="flex: 2;">Lesson Details</div>
+                    <div class="record-cell" style="text-align:right; flex: 1;">Total</div>
+                    <div class="record-cell" style="flex: 1;">Actions</div>
                 </div>
         `;
         tableHTML += lessonList.map(l => {
@@ -793,21 +800,28 @@ document.addEventListener('DOMContentLoaded', () => {
             let statusColor = '#d32f2f'; 
             const status = (l.payment_status || '').toLowerCase();
             if (status === 'done' || status === 'kevin' || status === 'paid') statusColor = '#1976d2'; 
+            
             return `
-                <div class="record-row">
-                    <div class="record-cell cell-date">
-                        <small style="color:var(--primary); font-weight: bold;">ID: ${l.id}</small><br>
-                        ${formatDate(l.date, true)}<br>
-                        <small style="color:#888">${l.start_time || '12:00'} - ${endT}</small>
+                <div class="record-row" style="align-items: center;">
+                    <div class="record-cell cell-combined" style="flex: 2; line-height: 1.4;">
+                        <div style="margin-bottom: 4px;">
+                            <small style="color:var(--primary); font-weight: bold;">#${l.id}</small>
+                            <span style="font-weight: bold; margin-left: 5px;">${formatDate(l.date, true)}</span>
+                        </div>
+                        <div style="font-size: 0.85rem; color: #666; margin-bottom: 4px;">
+                            ${l.start_time || '12:00'} - ${endT} (${l.duration}h)
+                        </div>
+                        <div style="font-size: 1rem; font-weight: bold; color: #333;">
+                            ${l.client_name || 'Anonymous'}
+                        </div>
+                        <div style="font-size: 0.8rem; color: #888;">
+                            <span style="color:${statusColor}; font-weight: bold;">${l.payment_status}</span> • ${l.payment_method || 'N/A'} • ${l.players_count}
+                        </div>
                     </div>
-                    <div class="record-cell cell-details">
-                        <strong>${l.name || 'N/A'}</strong> <small style="color:${statusColor}">(${l.payment_status})</small><br>
-                        ${l.duration}h x £${l.coach_value} (${l.payment_method || 'N/A'})<br>
-                        <small style="color:#888;">${l.players_count || '1-1'} Players, ${l.peak_type || 'Peak'} (${l.lesson_type || 'Private'})</small>
+                    <div class="record-cell cell-total" style="text-align:right; flex: 1; font-weight: bold; font-size: 1.1rem;">
+                        £${parseFloat(l.total_value).toFixed(2)}
                     </div>
-                    <div class="record-cell cell-total">£${parseFloat(l.total_value).toFixed(2)}</div>
-                    <div class="record-cell cell-actions">
-                        <button class="btn-icon btn-pay" title="Complete/Pay" onclick="openPayModal(${JSON.stringify(l).replace(/"/g, '&quot;')})">✅</button>
+                    <div class="record-cell cell-actions" style="flex: 1; display: flex; justify-content: flex-end; gap: 4px;">
                         <button class="btn-icon btn-pay" title="Update Payment" onclick="openPayModal(${JSON.stringify(l).replace(/"/g, '&quot;')})">💰</button>
                         <button class="btn-icon btn-edit" onclick="startEdit(${JSON.stringify(l).replace(/"/g, '&quot;')})">✎</button>
                         <button class="btn-icon btn-delete" onclick="deleteLesson(${l.id})">🗑</button>
@@ -1158,8 +1172,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('date').value = lesson.date;
         startTimeInput.value = lesson.start_time || '12:00';
         durationInput.value = lesson.duration.toString();
-        nameInput.value = lesson.name || '';
-        modelInput.value = lesson.model || 'KG Academy';
+        nameInput.value = lesson.client_name || '';        modelInput.value = lesson.model || 'KG Academy';
         let pt = lesson.peak_type || 'Peak';
         if (pt.toLowerCase().includes('off')) pt = 'Off Peak';
         else if (pt.toLowerCase().includes('peak') || pt.toLowerCase().includes('premium')) pt = 'Peak';
@@ -1211,6 +1224,66 @@ document.addEventListener('DOMContentLoaded', () => {
         const formatted = `${parts[2]}/${parts[1]}/${parts[0]}`;
         return includeDay ? `${daysOfWeek[d.getDay()]}, ${formatted}` : formatted;
     }
+
+    // Data Management Logic (Export/Import)
+    const importBtn = document.getElementById('import-btn');
+    const importFile = document.getElementById('import-file');
+    const exportBtn = document.getElementById('export-btn');
+
+    exportBtn?.addEventListener('click', () => {
+        window.location.href = '/api/export';
+    });
+
+    importBtn?.addEventListener('click', async () => {
+        const file = importFile.files[0];
+        if (!file) {
+            showToast('Please select a file first.', 'error');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const csv = e.target.result;
+            
+            // Visual feedback: disable button and show loading state
+            const originalText = importBtn.textContent;
+            importBtn.disabled = true;
+            importBtn.textContent = 'Importing...';
+            importBtn.style.opacity = '0.7';
+
+            try {
+                const res = await fetch('/api/import', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/csv' },
+                    body: csv
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    showToast(data.message || 'Import successful!');
+                    importFile.value = ''; // Clear file input
+                    loadDashboard(); // Refresh data if dashboard is active
+                    
+                    const activeTab = document.querySelector('.nav-item.active').getAttribute('data-tab');
+                    if (activeTab === 'records') loadLessons();
+                    if (activeTab === 'regtab') loadRegTab();
+                } else {
+                    // Show detailed error from server
+                    showToast(`Import Error: ${data.error || 'Unknown error'}`, 'error');
+                    console.error('Import server error:', data);
+                }
+            } catch (err) {
+                showToast(`Technical Error: ${err.message}`, 'error');
+                console.error('Import technical error:', err);
+            } finally {
+                // Restore button state
+                importBtn.disabled = false;
+                importBtn.textContent = originalText;
+                importBtn.style.opacity = '1';
+            }
+        };
+        reader.readAsText(file);
+    });
 
     cancelEdit();
     console.log('App.js finalizado!');

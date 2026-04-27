@@ -326,9 +326,10 @@
                                     <th data-sort="payment_method">Method ↕</th>
                                     <th data-sort="payment_status">Status ↕</th>
                                     <th data-sort="session_status">Sess ↕</th>
-                                    <th data-sort="exception">Exc ↕</th>
+                                    <th data-sort="exception">Exception ↕</th>
                                     <th data-sort="general_note">Note ↕</th>
-                                </tr>
+                                    <th>Actions</th>
+                                    </tr>
                             </thead>
                             <tbody id="full-table-body">
                                 <!-- Data will be inserted here -->
@@ -475,14 +476,14 @@
                         <p style="margin-bottom: 15px; color: #666; font-size: 0.9rem;">Upload a previously exported CSV file to restore your records.</p>
                         
                         <div style="background: #f0f0f0; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 0.8rem; border: 1px dashed #ccc;">
-                            <strong>Expected CSV Columns (Semicolon separated):</strong><br>
+                            <strong>Expected CSV Columns (Comma separated):</strong><br>
                             <code style="display: block; margin-top: 5px; color: var(--primary); word-break: break-all;">
-                                date; coach_value; duration; name; model; peak_type; start_time; lesson_type; payment_method; payment_status; players_count; general_note; exception; session_status
+                                date,start_time,peak_type,coach_value,duration,client_name,model,lesson_type,players_count,payment_method,payment_status,session_status,exception,general_note
                             </code>
                         </div>
 
                         <input type="file" id="import-file" accept=".csv" style="margin-bottom: 15px; border: none; padding: 0;">
-                        <button id="import-btn" class="btn-primary" style="background-color: #555;">Import Backup</button>
+                        <button id="import-btn" class="btn-primary" style="background-color: #2196F3;">Import Backup</button>
                     </div>
                 </div>
             </div>
