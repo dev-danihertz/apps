@@ -35,15 +35,34 @@ db.serialize(() => {
     FOREIGN KEY (user_id) REFERENCES users(id)
   )`, (err) => {
     if (!err) {
-      // Migração: Verificar se a coluna 'name' ainda existe e renomear para 'client_name'
+      // Sistema de Migração Robusto
       db.all("PRAGMA table_info(lessons)", (err, columns) => {
         if (!err) {
-          const hasName = columns.some(c => c.name === 'name');
-          const hasClientName = columns.some(c => c.name === 'client_name');
-          if (hasName && !hasClientName) {
-            console.log("Migrando coluna 'name' para 'client_name'...");
+          const colNames = columns.map(c => c.name);
+          
+          // 1. Migrar 'name' para 'client_name' se necessário
+          if (colNames.includes('name') && !colNames.includes('client_name')) {
+            console.log("Migrando 'name' -> 'client_name'...");
             db.run("ALTER TABLE lessons RENAME COLUMN name TO client_name;");
           }
+
+          // 2. Adicionar colunas faltantes uma por uma
+          const requiredColumns = [
+            { name: 'client_name', type: 'TEXT' },
+            { name: 'peak_type', type: 'TEXT' },
+            { name: 'start_time', type: 'TEXT' },
+            { name: 'lesson_type', type: 'TEXT DEFAULT "Private"' },
+            { name: 'players_count', type: 'TEXT DEFAULT "1-1"' },
+            { name: 'exception', type: 'TEXT DEFAULT "Normal"' },
+            { name: 'session_status', type: 'TEXT DEFAULT "Planned"' }
+          ];
+
+          requiredColumns.forEach(col => {
+            if (!colNames.includes(col.name) && col.name !== 'client_name') { // client_name já tratado no rename
+              console.log(`Adicionando coluna faltante: ${col.name}...`);
+              db.run(`ALTER TABLE lessons ADD COLUMN ${col.name} ${col.type};`);
+            }
+          });
         }
       });
     }
