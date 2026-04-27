@@ -587,6 +587,8 @@ document.addEventListener('DOMContentLoaded', () => {
             cancelEdit();
             loadLessons();
             showToast(editingLessonId ? 'Lesson updated!' : 'Lesson registered!');
+            // Switch back to records tab
+            document.querySelector('[data-tab="records"]').click();
         } else {
             showToast('Error saving lesson.', 'error');
         }
@@ -793,18 +795,17 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const today = new Date().toISOString().split('T')[0];
-        const activeLessons = lessons.filter(l => (l.session_status || 'Planned') === 'Planned' || l.date > today);
-        const historyLessons = lessons.filter(l => (l.session_status || 'Planned') === 'Completed' && l.date <= today);
+        const plannedLessons = lessons.filter(l => (l.session_status || 'Planned') === 'Planned');
+        const completedLessons = lessons.filter(l => l.session_status === 'Completed');
 
         let html = '';
-        if (activeLessons.length > 0) {
-            html += '<h3 style="margin-top: 10px; padding-left: 10px; color: var(--primary);">Planned & Upcoming</h3>';
-            html += renderTable(activeLessons);
+        if (plannedLessons.length > 0) {
+            html += '<h3 style="margin-top: 10px; padding-left: 10px; color: #ef6c00;">Planned Sessions</h3>';
+            html += renderTable(plannedLessons);
         }
-        if (historyLessons.length > 0) {
-            html += '<h3 style="margin-top: 20px; padding-left: 10px; color: #666;">Completed & Past</h3>';
-            html += renderTable(historyLessons);
+        if (completedLessons.length > 0) {
+            html += '<h3 style="margin-top: 20px; padding-left: 10px; color: #2e7d32;">Completed Sessions</h3>';
+            html += renderTable(completedLessons);
         }
         lessonsList.innerHTML = html;
     }
@@ -812,10 +813,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderTable(lessonList) {
         let tableHTML = `
             <div class="records-table">
-                <div class="record-row records-header" style="padding: 10px 5px;">
-                    <div class="record-cell" style="flex: 3;">Lesson Details</div>
-                    <div class="record-cell" style="text-align:right; flex: 1.2;">Total</div>
-                    <div class="record-cell" style="text-align:right; flex: 0.8; padding-right: 5px;">Actions</div>
+                <div class="record-row records-header" style="padding: 10px 10px; display: flex; justify-content: space-between;">
+                    <div class="record-cell">Lesson Details & Value</div>
+                    <div class="record-cell" style="text-align:right;">Actions</div>
                 </div>
         `;
         tableHTML += lessonList.map(l => {
@@ -827,30 +827,40 @@ document.addEventListener('DOMContentLoaded', () => {
             const status = (l.payment_status || '').toLowerCase();
             if (status === 'done' || status === 'kevin' || status === 'paid') statusColor = '#1976d2'; 
             
+            let rowBgColor = 'transparent';
+            let rowBorderColor = '#eee';
+            if (l.session_status === 'Planned') {
+                rowBgColor = 'rgba(211, 47, 47, 0.12)';
+                rowBorderColor = '#d32f2f';
+            } else if (l.session_status === 'Completed') {
+                rowBgColor = 'rgba(25, 118, 210, 0.12)';
+                rowBorderColor = '#1976d2';
+            }
+
             return `
-                <div class="record-row" style="align-items: center; padding: 12px 5px; border-bottom: 1px solid #eee;">
-                    <div class="record-cell cell-combined" style="flex: 3; line-height: 1.4; min-width: 0;">
-                        <div style="margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                            <small style="color:var(--primary); font-weight: bold;">#${l.id}</small>
-                            <span style="font-weight: bold; margin-left: 5px;">${formatDate(l.date, true)}</span>
+                <div class="record-row" style="display: flex; align-items: center; padding: 12px 10px; border-bottom: 1px solid #eee; border-left: 5px solid ${rowBorderColor}; gap: 10px; background-color: ${rowBgColor};">
+                    <div class="record-cell cell-combined" style="flex: 1; line-height: 1.4; min-width: 0;">
+                        <div style="margin-bottom: 2px; display: flex; justify-content: space-between; align-items: baseline;">
+                            <span style="font-weight: bold; font-size: 1rem; color: #333;">${formatDate(l.date, true)}</span>
+                            <span style="font-weight: bold; font-size: 1.2rem; color: var(--primary);">£${parseFloat(l.total_value).toFixed(2)}</span>
                         </div>
-                        <div style="font-size: 0.85rem; color: #666; margin-bottom: 4px;">
+                        <div style="font-size: 0.85rem; color: #666; margin-bottom: 2px;">
                             ${l.start_time || '12:00'} - ${endT} (${l.duration}h)
                         </div>
                         <div style="font-size: 1.05rem; font-weight: bold; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                             ${l.client_name || 'Anonymous'}
                         </div>
-                        <div style="font-size: 0.8rem; color: #888;">
-                            <span style="color:${statusColor}; font-weight: bold;">${l.payment_status}</span> • ${l.payment_method || 'N/A'}
+                        <div style="font-size: 0.8rem; color: #888; display: flex; align-items: center; gap: 5px; flex-wrap: wrap;">
+                            <small style="color:#aaa;">#${l.id}</small> • 
+                            <span style="color:${statusColor}; font-weight: bold;">${l.payment_status}</span> • 
+                            <span>${l.payment_method || 'N/A'}</span> • 
+                            <span style="color:${(l.session_status === 'Completed') ? '#2e7d32' : '#ef6c00'}; font-weight: bold;">${l.session_status || 'Planned'}</span>
                         </div>
                     </div>
-                    <div class="record-cell cell-total" style="text-align:right; flex: 1.2; font-weight: bold; font-size: 1.15rem; color: #333; white-space: nowrap; padding: 0 5px;">
-                        £${parseFloat(l.total_value).toFixed(2)}
-                    </div>
-                    <div class="record-cell cell-actions" style="flex: 0.8; display: flex; justify-content: flex-end; gap: 2px; padding-right: 2px;">
-                        <button class="btn-icon btn-pay" title="Update Payment" style="padding: 4px;" onclick="openPayModal(${JSON.stringify(l).replace(/"/g, '&quot;')})">💰</button>
-                        <button class="btn-icon btn-edit" style="padding: 4px;" onclick="startEdit(${JSON.stringify(l).replace(/"/g, '&quot;')})">✎</button>
-                        <button class="btn-icon btn-delete" style="padding: 4px;" onclick="deleteLesson(${l.id})">🗑</button>
+                    <div class="record-cell cell-actions" style="display: flex; flex-direction: column; gap: 8px; justify-content: center; border-left: 1px solid #f0f0f0; padding-left: 10px;">
+                        <button class="btn-icon btn-pay" title="Update Payment" style="padding: 6px; font-size: 1.2rem;" onclick="openPayModal(${JSON.stringify(l).replace(/"/g, '&quot;')})">💰</button>
+                        <button class="btn-icon btn-edit" style="padding: 6px; font-size: 1.1rem;" onclick="startEdit(${JSON.stringify(l).replace(/"/g, '&quot;')})">✎</button>
+                        <button class="btn-icon btn-delete" style="padding: 6px; font-size: 1.1rem;" onclick="deleteLesson(${l.id})">🗑</button>
                     </div>
                 </div>
             `;
