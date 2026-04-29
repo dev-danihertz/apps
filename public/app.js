@@ -37,12 +37,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const lessonTypeInput = document.getElementById('lesson-type');
     const playersInput = document.getElementById('players');
     const paymentMethodInput = document.getElementById('payment-method');
-    const paymentMethodOtherInput = document.getElementById('payment-method-other');
-    const paymentOtherGroup = document.getElementById('payment-other-group');
     const paymentStatusInput = document.getElementById('payment-status');
     const payMethodModalInput = document.getElementById('pay-method');
-    const payMethodOtherModalInput = document.getElementById('pay-method-other');
-    const payMethodOtherModalGroup = document.getElementById('pay-method-other-group');
     const startTimeInput = document.getElementById('start-time');
     const endTimeInput = document.getElementById('end-time');
     const generalNoteInput = document.getElementById('general-note');
@@ -170,14 +166,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updatePaymentSelects() {
-        const selects = [paymentMethodInput, document.getElementById('pay-method')];
+        const selects = [paymentMethodInput, payMethodModalInput];
         selects.forEach(select => {
             if (!select) return;
             const currentValue = select.value;
             let html = paymentMethods.map(m => `<option value="${m.name}">${m.name}</option>`).join('');
-            html += '<option value="Other">Other</option>';
             select.innerHTML = html;
-            // Restore value if it still exists in the list
             if ([...select.options].some(o => o.value === currentValue)) {
                 select.value = currentValue;
             }
@@ -186,8 +180,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('payment-method-form')?.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const nameInput = document.getElementById('new-payment-method-name');
-        const name = nameInput.value.trim();
+        const nameInputEle = document.getElementById('new-payment-method-name');
+        const name = nameInputEle.value.trim();
         if (!name) return;
 
         const res = await fetch('/api/payment-methods', {
@@ -197,10 +191,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (res.ok) {
-            nameInput.value = '';
+            nameInputEle.value = '';
             loadPaymentMethods();
             showToast('Method added!');
-            // Show list automatically when adding
             document.getElementById('payment-methods-list').classList.remove('hidden');
         }
     });
@@ -253,12 +246,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const today = now.toISOString().split('T')[0];
         document.getElementById('date').value = today;
         
-        // Default dates for bulk filter (current month)
         const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
         const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
         
-        // Helper to format date as YYYY-MM-DD using local time to avoid timezone shifts
-        const formatDate = (date) => {
+        const formatDateLocal = (date) => {
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const day = String(date.getDate()).padStart(2, '0');
@@ -267,8 +258,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const bulkStartInput = document.getElementById('bulk-start');
         const bulkEndInput = document.getElementById('bulk-end');
-        if (bulkStartInput) bulkStartInput.value = formatDate(firstDay);
-        if (bulkEndInput) bulkEndInput.value = formatDate(lastDay);
+        if (bulkStartInput) bulkStartInput.value = formatDateLocal(firstDay);
+        if (bulkEndInput) bulkEndInput.value = formatDateLocal(lastDay);
 
         startTimeInput.value = '12:00';
         durationInput.value = '1';
@@ -276,8 +267,6 @@ document.addEventListener('DOMContentLoaded', () => {
         modelInput.value = 'KG Academy';
         lessonTypeInput.value = 'Private';
         playersInput.value = '1-1';
-        paymentMethodInput.value = 'App';
-        paymentOtherGroup.classList.add('hidden');
         paymentStatusInput.value = 'Waiting';
         exceptionInput.value = 'Normal';
         sessionStatusInput.value = 'Planned';
@@ -285,16 +274,6 @@ document.addEventListener('DOMContentLoaded', () => {
         calculateTotal();
         calculatePeakType();
     }
-
-    paymentMethodInput.addEventListener('change', () => {
-        if (paymentMethodInput.value === 'Other') paymentOtherGroup.classList.remove('hidden');
-        else paymentOtherGroup.classList.add('hidden');
-    });
-
-    payMethodModalInput.addEventListener('change', () => {
-        if (payMethodModalInput.value === 'Other') payMethodOtherModalGroup.classList.remove('hidden');
-        else payMethodOtherModalGroup.classList.add('hidden');
-    });
 
     [startTimeInput, durationInput, valueInput, document.getElementById('date')].forEach(input => {
         input.addEventListener('input', () => {
@@ -371,12 +350,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderFullTable(lessons) {
         const body = document.getElementById('full-table-body');
         
-        // Sort data
         const sorted = [...lessons].sort((a, b) => {
             let valA = a[currentSort.column];
             let valB = b[currentSort.column];
             
-            // Handle numeric values
             if (['id', 'duration', 'coach_value', 'total_value'].includes(currentSort.column)) {
                 valA = parseFloat(valA) || 0;
                 valB = parseFloat(valB) || 0;
@@ -385,7 +362,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (valA < valB) return currentSort.direction === 'asc' ? -1 : 1;
             if (valA > valB) return currentSort.direction === 'asc' ? 1 : -1;
             
-            // If values are equal (like same date), sort by ID descending to show newest first
             if (currentSort.column !== 'id') {
                 return b.id - a.id;
             }
@@ -427,7 +403,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentSort.direction = 'asc';
             }
             
-            // Update UI indicators
             document.querySelectorAll('#full-table-header th').forEach(h => {
                 const col = h.getAttribute('data-sort');
                 h.textContent = h.textContent.replace(/[↕↑↓]/g, '').trim() + ' ' + 
@@ -482,7 +457,6 @@ document.addEventListener('DOMContentLoaded', () => {
                        matchesDuration && matchesModel && matchesPlayers && matchesPeak;
             });
 
-            // Hide action containers when filtering again
             bulkActionTriggerContainer?.classList.add('hidden');
             bulkUpdateSection?.classList.add('hidden');
 
@@ -543,12 +517,10 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         }).join('');
 
-        // Listen for checkbox changes to show/hide the trigger button
         document.querySelectorAll('.bulk-item-checkbox').forEach(cb => {
             cb.addEventListener('change', updateBulkActionTriggerVisibility);
         });
         selectAllCheckbox?.addEventListener('change', () => {
-            // Give it a tiny delay to ensure all checkboxes are updated by the other listener
             setTimeout(updateBulkActionTriggerVisibility, 50);
         });
     }
@@ -568,7 +540,6 @@ document.addEventListener('DOMContentLoaded', () => {
         btnShowBulkUpdate.scrollIntoView({ behavior: 'smooth' });
     });
 
-    // Event listener for Select All
     document.getElementById('bulk-select-all')?.addEventListener('change', (e) => {
         const isChecked = e.target.checked;
         document.querySelectorAll('.bulk-item-checkbox:not(:disabled)').forEach(cb => {
@@ -591,7 +562,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         showLoading(`Updating ${selectedIds.length} records...`);
         try {
-            // Find the full lesson objects for the selected IDs
             const lessonsToUpdate = filteredResults.filter(l => selectedIds.includes(l.id));
 
             for (const l of lessonsToUpdate) {
@@ -608,9 +578,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             showToast('Atualização em massa concluída!');
-            // Refresh current view without hiding everything
             bulkFilterBtn.click();
-            loadLessons(); // Refresh background data
+            loadLessons(); 
         } catch (err) {
             showToast('Erro durante a atualização em massa: ' + err.message, 'error');
         } finally {
@@ -633,10 +602,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             showToast(`${selectedIds.length} registros apagados com sucesso!`);
             
-            // Refresh current view
             document.getElementById('bulk-select-all').checked = false;
             bulkFilterBtn.click();
-            loadLessons(); // Refresh background data
+            loadLessons(); 
         } catch (err) {
             showToast('Erro durante a exclusão em massa: ' + err.message, 'error');
         } finally {
@@ -685,8 +653,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     lessonForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        let paymentMethodValue = paymentMethodInput.value;
-        if (paymentMethodValue === 'Other') paymentMethodValue = paymentMethodOtherInput.value || 'Other';
 
         const lessonData = {
             date: document.getElementById('date').value,
@@ -696,7 +662,7 @@ document.addEventListener('DOMContentLoaded', () => {
             peak_type: peakInput.value,
             lesson_type: lessonTypeInput.value,
             players_count: playersInput.value,
-            payment_method: paymentMethodValue,
+            payment_method: paymentMethodInput.value,
             payment_status: paymentStatusInput.value,
             coach_value: normalizeNumber(valueInput.value),
             duration: normalizeNumber(durationInput.value),
@@ -716,14 +682,12 @@ document.addEventListener('DOMContentLoaded', () => {
             cancelEdit();
             loadLessons();
             showToast(editingLessonId ? 'Lesson updated!' : 'Lesson registered!');
-            // Switch back to records tab
             document.querySelector('[data-tab="records"]').click();
         } else {
             showToast('Error saving lesson.', 'error');
         }
     });
 
-    // Quick Pay Logic
     payForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('pay-lesson-id').value;
@@ -733,13 +697,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (!lesson) return;
 
-        let paymentMethodValue = document.getElementById('pay-method').value;
-        if (paymentMethodValue === 'Other') paymentMethodValue = document.getElementById('pay-method-other').value || 'Other';
-
         const updatedData = {
             ...lesson,
             coach_value: normalizeNumber(document.getElementById('pay-amount').value) / lesson.duration,
-            payment_method: paymentMethodValue,
+            payment_method: payMethodModalInput.value,
             payment_status: document.getElementById('pay-status').value,
             players_count: document.getElementById('pay-players').value,
             session_status: document.getElementById('pay-session-status').value
@@ -786,7 +747,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentYear = now.getFullYear();
         const today = now.toISOString().split('T')[0];
 
-        // Rótulo amigável para o mês
         const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
         document.getElementById('current-month-label').textContent = `${monthNames[now.getMonth()]} ${currentYear}`;
 
@@ -914,11 +874,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function showLogin() {
-        dashboardScreen.classList.add('hidden');
-        loginScreen.classList.remove('hidden');
-    }
-
     async function loadLessons() {
         const res = await fetch('/api/lessons');
         const lessons = await res.json();
@@ -1004,17 +959,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.openPayModal = (lesson) => {
         document.getElementById('pay-lesson-id').value = lesson.id;
         document.getElementById('pay-amount').value = parseFloat(lesson.total_value).toFixed(2);
-        
-        const standardMethods = ['Bank Transfer', 'Cash', 'Card', 'App', 'Voucher', 'Membership', 'Kevin Student', 'Playtomic', 'Myself'];
-        if (standardMethods.includes(lesson.payment_method)) {
-            document.getElementById('pay-method').value = lesson.payment_method;
-            document.getElementById('pay-method-other-group').classList.add('hidden');
-        } else {
-            document.getElementById('pay-method').value = 'Other';
-            document.getElementById('pay-method-other').value = lesson.payment_method || '';
-            document.getElementById('pay-method-other-group').classList.remove('hidden');
-        }
-
+        document.getElementById('pay-method').value = lesson.payment_method || '';
         document.getElementById('pay-status').value = lesson.payment_status || 'Waiting';
         document.getElementById('pay-players').value = lesson.players_count || '1-1';
         document.getElementById('pay-session-status').value = 'Completed';
@@ -1350,22 +1295,15 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('date').value = lesson.date;
         startTimeInput.value = lesson.start_time || '12:00';
         durationInput.value = lesson.duration.toString();
-        nameInput.value = lesson.client_name || '';        modelInput.value = lesson.model || 'KG Academy';
+        nameInput.value = lesson.client_name || '';
+        modelInput.value = lesson.model || 'KG Academy';
         let pt = lesson.peak_type || 'Peak';
         if (pt.toLowerCase().includes('off')) pt = 'Off Peak';
         else if (pt.toLowerCase().includes('peak') || pt.toLowerCase().includes('premium')) pt = 'Peak';
         peakInput.value = pt;
         lessonTypeInput.value = lesson.lesson_type || 'Private';
         playersInput.value = lesson.players_count || '1-1';
-        const standardMethods = ['Bank Transfer', 'Cash', 'Card', 'App', 'Voucher', 'Membership', 'Kevin Student', 'Playtomic', 'Myself'];
-        if (standardMethods.includes(lesson.payment_method)) {
-            paymentMethodInput.value = lesson.payment_method;
-            paymentOtherGroup.classList.add('hidden');
-        } else {
-            paymentMethodInput.value = 'Other';
-            paymentMethodOtherInput.value = lesson.payment_method || '';
-            paymentOtherGroup.classList.remove('hidden');
-        }
+        paymentMethodInput.value = lesson.payment_method || '';
         paymentStatusInput.value = lesson.payment_status || 'Pending';
         valueInput.value = lesson.coach_value.toString();
         generalNoteInput.value = lesson.general_note || '';
@@ -1403,7 +1341,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return includeDay ? `${daysOfWeek[d.getDay()]}, ${formatted}` : formatted;
     }
 
-    // Data Management Logic (Export/Import)
     const importBtn = document.getElementById('import-btn');
     const importFile = document.getElementById('import-file');
     const exportBtn = document.getElementById('export-btn');
@@ -1422,8 +1359,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const reader = new FileReader();
         reader.onload = async (e) => {
             const csv = e.target.result;
-            
-            // Visual feedback: disable button and show loading state
             const originalText = importBtn.textContent;
             importBtn.disabled = true;
             importBtn.textContent = 'Importing...';
@@ -1439,22 +1374,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await res.json();
                 if (res.ok) {
                     showToast(data.message || 'Import successful!');
-                    importFile.value = ''; // Clear file input
-                    loadDashboard(); // Refresh data if dashboard is active
+                    importFile.value = ''; 
+                    loadDashboard(); 
                     
                     const activeTab = document.querySelector('.nav-item.active').getAttribute('data-tab');
                     if (activeTab === 'records') loadLessons();
-                    if (activeTab === 'regtab') loadRegTab();
                 } else {
-                    // Show detailed error from server
                     showToast(`Import Error: ${data.error || 'Unknown error'}`, 'error');
-                    console.error('Import server error:', data);
                 }
             } catch (err) {
                 showToast(`Technical Error: ${err.message}`, 'error');
-                console.error('Import technical error:', err);
             } finally {
-                // Restore button state
                 importBtn.disabled = false;
                 importBtn.textContent = originalText;
                 importBtn.style.opacity = '1';
