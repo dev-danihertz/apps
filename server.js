@@ -99,14 +99,11 @@ app.put('/api/lessons/:id', isAuthenticated, (req, res) => {
 
   console.log('Updating lesson:', id, req.body); // LOG PARA DEBUG
 
-  db.run("UPDATE lessons SET date = ?, coach_value = ?, duration = ?, client_name = ?, model = ?, peak_type = ?, start_time = ?, lesson_type = ?, payment_method = ?, payment_status = ?, players_count = ?, general_note = ?, exception = ?, session_status = ? WHERE id = ? AND user_id = ?", 
-    [date, coach_value, duration, client_name || '', model, peak_type, start_time, lesson_type, payment_method, payment_status, players_count, general_note || '', exception || 'Normal', session_status || 'Planned', id, userId], 
+  db.run("UPDATE lessons SET date = ?, coach_value = ?, duration = ?, client_name = ?, model = ?, peak_type = ?, start_time = ?, lesson_type = ?, payment_method = ?, payment_status = ?, players_count = ?, general_note = ?, exception = ?, session_status = ? WHERE id = ? AND user_id = ?",
+    [date, coach_value, duration, client_name, model, peak_type, start_time, lesson_type, payment_method, payment_status, players_count, general_note, exception, session_status, id, userId],
     function(err) {
-      if (err) {
-        console.error('Error updating lesson:', err.message);
-        return res.status(500).json({ error: err.message });
-      }
-      res.json({ message: 'Lesson updated' });
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ success: true });
     }
   );
 });
@@ -117,6 +114,47 @@ app.delete('/api/lessons/:id', isAuthenticated, (req, res) => {
   db.run("DELETE FROM lessons WHERE id = ? AND user_id = ?", [id, userId], function(err) {
     if (err) return res.status(500).json({ error: err.message });
     res.json({ message: 'Lesson deleted' });
+  });
+});
+
+// PAYMENT METHODS ENDPOINTS
+app.get('/api/payment-methods', isAuthenticated, (req, res) => {
+  const userId = req.session.userId;
+  db.all("SELECT * FROM payment_methods WHERE user_id = ? ORDER BY name ASC", [userId], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+app.post('/api/payment-methods', isAuthenticated, (req, res) => {
+  const { name } = req.body;
+  const userId = req.session.userId;
+  if (!name) return res.status(400).json({ error: 'Name is required' });
+
+  db.run("INSERT INTO payment_methods (user_id, name) VALUES (?, ?)", [userId, name], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ id: this.lastID, name });
+  });
+});
+
+app.put('/api/payment-methods/:id', isAuthenticated, (req, res) => {
+  const { name } = req.body;
+  const { id } = req.params;
+  const userId = req.session.userId;
+
+  db.run("UPDATE payment_methods SET name = ? WHERE id = ? AND user_id = ?", [name, id, userId], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true });
+  });
+});
+
+app.delete('/api/payment-methods/:id', isAuthenticated, (req, res) => {
+  const { id } = req.params;
+  const userId = req.session.userId;
+
+  db.run("DELETE FROM payment_methods WHERE id = ? AND user_id = ?", [id, userId], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true });
   });
 });
 
@@ -175,7 +213,7 @@ app.post('/api/import', isAuthenticated, (req, res) => {
   });
 
   db.serialize(() => {
-    const stmt = db.prepare("INSERT INTO lessons (user_id, date, coach_value, duration, client_name, model, peak_type, start_time, lesson_type, payment_method, payment_status, players_count, general_note, exception, session_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    const stmt = db.prepare("INSERT INTO lessons (user_id, date, coach_value, duration, client_name, model, peak_type, start_time, lesson_type, players_count, payment_method, payment_status, session_status, exception, general_note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     
     let errorOccurred = false;
     lessons.forEach(lesson => {
@@ -189,12 +227,12 @@ app.post('/api/import', isAuthenticated, (req, res) => {
         lesson.peak_type,
         lesson.start_time,
         lesson.lesson_type,
+        lesson.players_count,
         lesson.payment_method,
         lesson.payment_status,
-        lesson.players_count,
-        lesson.general_note || '',
+        lesson.session_status || 'Planned',
         lesson.exception || 'Normal',
-        lesson.session_status || 'Planned'
+        lesson.general_note || ''
       ], (err) => {
         if (err) {
           console.error('Row import error:', err);

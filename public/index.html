@@ -46,16 +46,12 @@
                     <div class="form-group">
                         <label for="pay-method">Payment Method</label>
                         <select id="pay-method" style="width:100%; padding:14px; border-radius:8px; border:1px solid #ddd;">
-                            <option value="App">App</option>
-                            <option value="Playtomic">Playtomic</option>
-                            <option value="Bank Transfer">Bank Transfer</option>
-                            <option value="Cash">Cash</option>
-                            <option value="Card">Card</option>
-                            <option value="Voucher">Voucher</option>
-                            <option value="Membership">Membership</option>
-                            <option value="Kevin Student">Kevin Student</option>
-                            <option value="Myself">Myself</option>
+                            <!-- Loaded dynamically -->
                         </select>
+                    </div>
+                    <div id="pay-method-other-group" class="form-group hidden">
+                        <label for="pay-method-other">Specify Other Method</label>
+                        <input type="text" id="pay-method-other" placeholder="Enter payment method">
                     </div>
                     <div class="form-group">
                         <label for="pay-status">Payment Status</label>
@@ -134,7 +130,7 @@
                         </div>
 
                         <div class="version-info">
-                            Last update: 27/04/2026 17:03
+                            Last update: 29/04/2026 19:35
                         </div>                        </div>
                 </div>
 
@@ -203,16 +199,7 @@
                             <div class="form-group">
                                 <label for="payment-method">Payment Method</label>
                                 <select id="payment-method" style="width:100%; padding:14px; border-radius:8px; border:1px solid #ddd;">
-                                    <option value="App" selected>App</option>
-                                    <option value="Playtomic">Playtomic</option>
-                                    <option value="Bank Transfer">Bank Transfer</option>
-                                    <option value="Cash">Cash</option>
-                                    <option value="Card">Card</option>
-                                    <option value="Voucher">Voucher</option>
-                                    <option value="Membership">Membership</option>
-                                    <option value="Kevin Student">Kevin Student</option>
-                                    <option value="Myself">Myself</option>
-                                    <option value="Other">Other</option>
+                                    <!-- Loaded dynamically -->
                                 </select>
                             </div>
                             <div id="payment-other-group" class="form-group hidden">
@@ -350,6 +337,23 @@
                                 <!-- Data will be inserted here -->
                             </tbody>
                         </table>
+                    </div>
+                </div>
+
+                <!-- Cadastros Tab -->
+                <div id="tab-cadastros" class="tab-pane hidden">
+                    <div class="card">
+                        <h3>Payment Methods</h3>
+                        <form id="payment-method-form" style="display: flex; gap: 10px; margin-bottom: 20px;">
+                            <input type="text" id="new-payment-method-name" placeholder="Method name (e.g. PayPal)" required style="flex: 1;">
+                            <button type="submit" class="btn-primary" style="margin-top: 0; width: auto; padding: 0 20px;">Add</button>
+                        </form>
+                        
+                        <button id="toggle-payment-list" class="btn-text" style="width: 100%; margin-bottom: 10px; text-decoration: underline; font-size: 0.9rem;">View/Manage Registered Methods</button>
+                        
+                        <div id="payment-methods-list" class="hidden" style="display: flex; flex-direction: column; gap: 10px;">
+                            <!-- List will be inserted here -->
+                        </div>
                     </div>
                 </div>
 
@@ -529,6 +533,10 @@
                 <button class="nav-item" data-tab="data">
                     <span class="icon">💾</span>
                     <span class="label">Data</span>
+                </button>
+                <button class="nav-item" data-tab="cadastros">
+                    <span class="icon">🔧</span>
+                    <span class="label">Cadastros</span>
                 </button>
                 <button class="nav-item" data-tab="bulk">
                     <span class="icon">⚙️</span>

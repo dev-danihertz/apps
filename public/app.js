@@ -17,6 +17,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadingOverlay = document.getElementById('loading-overlay');
     const loadingText = document.getElementById('loading-text');
 
+    let paymentMethods = [];
+
     function showLoading(text = 'Processing...') {
         loadingText.textContent = text;
         loadingOverlay.classList.remove('hidden');
@@ -38,6 +40,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const paymentMethodOtherInput = document.getElementById('payment-method-other');
     const paymentOtherGroup = document.getElementById('payment-other-group');
     const paymentStatusInput = document.getElementById('payment-status');
+    const payMethodModalInput = document.getElementById('pay-method');
+    const payMethodOtherModalInput = document.getElementById('pay-method-other');
+    const payMethodOtherModalGroup = document.getElementById('pay-method-other-group');
     const startTimeInput = document.getElementById('start-time');
     const endTimeInput = document.getElementById('end-time');
     const generalNoteInput = document.getElementById('general-note');
@@ -119,9 +124,116 @@ document.addEventListener('DOMContentLoaded', () => {
         const activeTab = document.querySelector('.nav-item.active').getAttribute('data-tab');
         if (activeTab === 'dashboard') loadDashboard();
         if (activeTab === 'graphics') updateGraphics();
+        if (activeTab === 'cadastros') loadPaymentMethods();
         
         showToast(isPrivate ? 'Values hidden' : 'Values visible');
     });
+
+    // Payment Methods Management
+    async function loadPaymentMethods() {
+        const res = await fetch('/api/payment-methods');
+        paymentMethods = await res.json();
+        renderPaymentMethods();
+        updatePaymentSelects();
+    }
+
+    function renderPaymentMethods() {
+        const list = document.getElementById('payment-methods-list');
+        if (paymentMethods.length === 0) {
+            list.innerHTML = '<p style="text-align:center;color:#888;">No methods registered.</p>';
+            return;
+        }
+
+        let html = `
+            <table class="full-table" style="margin-top: 10px; font-size: 0.9rem;">
+                <thead>
+                    <tr>
+                        <th style="text-align: left; padding: 8px;">Method Name</th>
+                        <th style="width: 100px; text-align: center; padding: 8px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        html += paymentMethods.map(m => `
+            <tr>
+                <td style="padding: 8px; font-weight: 500;">${m.name}</td>
+                <td style="text-align: center; padding: 4px;">
+                    <button class="btn-icon" onclick="editPaymentMethod(${m.id}, '${m.name}')" style="font-size: 1.1rem;">✎</button>
+                    <button class="btn-icon" onclick="deletePaymentMethod(${m.id})" style="color: #d32f2f; font-size: 1.1rem; margin-left: 15px;">🗑</button>
+                </td>
+            </tr>
+        `).join('');
+
+        html += '</tbody></table>';
+        list.innerHTML = html;
+    }
+
+    function updatePaymentSelects() {
+        const selects = [paymentMethodInput, document.getElementById('pay-method')];
+        selects.forEach(select => {
+            if (!select) return;
+            const currentValue = select.value;
+            let html = paymentMethods.map(m => `<option value="${m.name}">${m.name}</option>`).join('');
+            html += '<option value="Other">Other</option>';
+            select.innerHTML = html;
+            // Restore value if it still exists in the list
+            if ([...select.options].some(o => o.value === currentValue)) {
+                select.value = currentValue;
+            }
+        });
+    }
+
+    document.getElementById('payment-method-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const nameInput = document.getElementById('new-payment-method-name');
+        const name = nameInput.value.trim();
+        if (!name) return;
+
+        const res = await fetch('/api/payment-methods', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+
+        if (res.ok) {
+            nameInput.value = '';
+            loadPaymentMethods();
+            showToast('Method added!');
+            // Show list automatically when adding
+            document.getElementById('payment-methods-list').classList.remove('hidden');
+        }
+    });
+
+    document.getElementById('toggle-payment-list')?.addEventListener('click', () => {
+        const list = document.getElementById('payment-methods-list');
+        list.classList.toggle('hidden');
+    });
+
+    window.editPaymentMethod = async (id, currentName) => {
+        const newName = prompt('Edit payment method name:', currentName);
+        if (newName && newName !== currentName) {
+            const res = await fetch(`/api/payment-methods/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: newName })
+            });
+            if (res.ok) {
+                loadPaymentMethods();
+                showToast('Method updated!');
+            }
+        }
+    };
+
+    window.deletePaymentMethod = async (id) => {
+        if (confirm('Delete this payment method?')) {
+            const res = await fetch(`/api/payment-methods/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                loadPaymentMethods();
+                showToast('Method deleted!');
+            }
+        }
+    };
 
     function showToast(message, type = 'success') {
         const toast = document.createElement('div');
@@ -179,6 +291,11 @@ document.addEventListener('DOMContentLoaded', () => {
         else paymentOtherGroup.classList.add('hidden');
     });
 
+    payMethodModalInput.addEventListener('change', () => {
+        if (payMethodModalInput.value === 'Other') payMethodOtherModalGroup.classList.remove('hidden');
+        else payMethodOtherModalGroup.classList.add('hidden');
+    });
+
     [startTimeInput, durationInput, valueInput, document.getElementById('date')].forEach(input => {
         input.addEventListener('input', () => {
             calculateTimes();
@@ -232,12 +349,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const targetPane = document.getElementById(`tab-${targetTab}`);
             targetPane.classList.remove('hidden');
             
-            const titles = { dashboard: 'Dashboard', insert: 'Insert Lesson', records: 'My Records', graphics: 'Performance', regtab: 'Full Records', data: 'Manage Data', bulk: 'Bulk Actions' };
+            const titles = { dashboard: 'Dashboard', insert: 'Insert Lesson', records: 'My Records', graphics: 'Performance', regtab: 'Full Records', data: 'Manage Data', bulk: 'Bulk Actions', cadastros: 'Payment Methods' };
             tabTitle.textContent = titles[targetTab];
             if (targetTab === 'dashboard') loadDashboard();
             if (targetTab === 'records') loadLessons();
             if (targetTab === 'graphics') updateGraphics();
             if (targetTab === 'regtab') loadRegTab();
+            if (targetTab === 'cadastros') loadPaymentMethods();
         });
     });
 
@@ -615,10 +733,13 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (!lesson) return;
 
+        let paymentMethodValue = document.getElementById('pay-method').value;
+        if (paymentMethodValue === 'Other') paymentMethodValue = document.getElementById('pay-method-other').value || 'Other';
+
         const updatedData = {
             ...lesson,
             coach_value: normalizeNumber(document.getElementById('pay-amount').value) / lesson.duration,
-            payment_method: document.getElementById('pay-method').value,
+            payment_method: paymentMethodValue,
             payment_status: document.getElementById('pay-status').value,
             players_count: document.getElementById('pay-players').value,
             session_status: document.getElementById('pay-session-status').value
@@ -883,8 +1004,18 @@ document.addEventListener('DOMContentLoaded', () => {
     window.openPayModal = (lesson) => {
         document.getElementById('pay-lesson-id').value = lesson.id;
         document.getElementById('pay-amount').value = parseFloat(lesson.total_value).toFixed(2);
-        document.getElementById('pay-method').value = lesson.payment_method || 'App';
-        document.getElementById('pay-status').value = 'Done';
+        
+        const standardMethods = ['Bank Transfer', 'Cash', 'Card', 'App', 'Voucher', 'Membership', 'Kevin Student', 'Playtomic', 'Myself'];
+        if (standardMethods.includes(lesson.payment_method)) {
+            document.getElementById('pay-method').value = lesson.payment_method;
+            document.getElementById('pay-method-other-group').classList.add('hidden');
+        } else {
+            document.getElementById('pay-method').value = 'Other';
+            document.getElementById('pay-method-other').value = lesson.payment_method || '';
+            document.getElementById('pay-method-other-group').classList.remove('hidden');
+        }
+
+        document.getElementById('pay-status').value = lesson.payment_status || 'Waiting';
         document.getElementById('pay-players').value = lesson.players_count || '1-1';
         document.getElementById('pay-session-status').value = 'Completed';
         payModal.classList.remove('hidden');
@@ -1333,5 +1464,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     cancelEdit();
+    loadPaymentMethods();
     console.log('App.js finalizado!');
 });

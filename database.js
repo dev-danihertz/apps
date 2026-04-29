@@ -79,6 +79,27 @@ db.serialize(() => {
       console.log('Usuário padrão criado com sucesso.');
     }
   });
+
+  // Tabela de métodos de pagamento
+  db.run(`CREATE TABLE IF NOT EXISTS payment_methods (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  )`, (err) => {
+    if (!err) {
+      // Seed inicial se estiver vazia
+      db.get("SELECT COUNT(*) as count FROM payment_methods", (err, row) => {
+        if (row && row.count === 0) {
+          const methods = ['Bank Transfer', 'Cash', 'Card', 'App', 'Voucher', 'Membership', 'Kevin Student', 'Playtomic', 'Myself'];
+          methods.forEach(m => {
+            db.run("INSERT INTO payment_methods (user_id, name) VALUES (1, ?)", [m]);
+          });
+          console.log('Métodos de pagamento iniciais cadastrados.');
+        }
+      });
+    }
+  });
 });
 
 module.exports = db;
