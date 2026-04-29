@@ -61,6 +61,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+    const getLocalYYYYMMDD = (date) => {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    };
+
     // Plugin para mostrar valores nos pontos/barras
     const pointValuePlugin = {
         id: 'pointValuePlugin',
@@ -243,23 +250,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function setDefaultValues() {
         const now = new Date();
-        const today = now.toISOString().split('T')[0];
-        document.getElementById('date').value = today;
+        const todayStr = getLocalYYYYMMDD(now);
+        document.getElementById('date').value = todayStr;
         
         const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
         const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
         
-        const formatDateLocal = (date) => {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        };
-
         const bulkStartInput = document.getElementById('bulk-start');
         const bulkEndInput = document.getElementById('bulk-end');
-        if (bulkStartInput) bulkStartInput.value = formatDateLocal(firstDay);
-        if (bulkEndInput) bulkEndInput.value = formatDateLocal(lastDay);
+        if (bulkStartInput) bulkStartInput.value = getLocalYYYYMMDD(firstDay);
+        if (bulkEndInput) bulkEndInput.value = getLocalYYYYMMDD(lastDay);
 
         startTimeInput.value = '12:00';
         durationInput.value = '1';
@@ -745,7 +745,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const now = new Date();
         const currentMonth = now.getMonth() + 1;
         const currentYear = now.getFullYear();
-        const today = now.toISOString().split('T')[0];
+        const today = getLocalYYYYMMDD(now);
 
         const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
         document.getElementById('current-month-label').textContent = `${monthNames[now.getMonth()]} ${currentYear}`;
@@ -755,8 +755,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return parseInt(y) === currentYear && parseInt(m) === currentMonth;
         });
 
-        const pastLessons = monthLessons.filter(l => l.date <= today);
-        const futureLessons = monthLessons.filter(l => l.date > today);
+        const pastLessons = monthLessons.filter(l => l.date < today);
+        const futureLessons = monthLessons.filter(l => l.date >= today);
         
         const pastCount = pastLessons.length;
         const futureCount = futureLessons.length;
@@ -790,7 +790,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const next7Days = new Date();
         next7Days.setDate(now.getDate() + 7);
-        const next7DaysStr = next7Days.toISOString().split('T')[0];
+        const next7DaysStr = getLocalYYYYMMDD(next7Days);
 
         const upcomingSessions = lessons.filter(l => {
             return l.date >= today && l.date <= next7DaysStr;
@@ -804,13 +804,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 const dateParts = l.date.split('-');
                 const d = new Date(l.date + 'T12:00:00');
                 const dayName = daysOfWeek[d.getDay()];
+                
+                const isToday = l.date === today;
+                const accentColor = isToday ? '#1976d2' : '#4caf50';
+
                 return `
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #fdfdfd; border-radius: 10px; border-left: 4px solid #4caf50; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #fdfdfd; border-radius: 10px; border-left: 4px solid ${accentColor}; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
                         <div style="flex: 1;">
                             <span style="font-weight: bold; color: #333; font-size: 0.95rem;">${dayName}</span>
                             <span style="color: #888; font-size: 0.8rem; margin-left: 5px;">${dateParts[2]}/${dateParts[1]}</span>
                         </div>
-                        <div style="flex: 2; text-align: right; font-weight: 500; color: var(--primary);">
+                        <div style="flex: 2; text-align: right; font-weight: 500; color: ${accentColor};">
                             ${l.client_name || 'Anonymous'} <span style="font-size: 0.75rem; color: #999;">(${l.start_time})</span>
                         </div>
                     </div>
@@ -970,8 +974,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeof Chart === 'undefined') return;
         const res = await fetch('/api/lessons');
         const allLessons = await res.json();
-        const today = new Date().toISOString().split('T')[0];
-        const lessons = allLessons.filter(l => l.date <= today);
+        const todayStr = getLocalYYYYMMDD(new Date());
+        const lessons = allLessons.filter(l => l.date <= todayStr);
 
         if (allLessons.length === 0) return;
         renderComparisonChart(allLessons);
@@ -1108,9 +1112,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderComparisonChart(allLessons) {
-        const today = new Date().toISOString().split('T')[0];
-        const pastCount = allLessons.filter(l => l.date <= today).length;
-        const futureCount = allLessons.filter(l => l.date > today).length;
+        const todayStr = getLocalYYYYMMDD(new Date());
+        const pastCount = allLessons.filter(l => l.date <= todayStr).length;
+        const futureCount = allLessons.filter(l => l.date > todayStr).length;
 
         const ctx = document.getElementById('comparisonChart').getContext('2d');
         if (comparisonChart) comparisonChart.destroy();
