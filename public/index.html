@@ -413,7 +413,35 @@
                                 </select>
                             </div>
                         </div>
-                        <button id="bulk-filter-btn" class="btn-primary" style="background:#555;">Filter Records</button>
+                        <div style="display: flex; gap: 10px;">
+                            <button id="bulk-filter-btn" class="btn-primary" style="background:#555; flex: 1;">Filter Records</button>
+                            <button id="generate-closing-btn" class="btn-primary" style="background: #2e7d32; flex: 1;">Gerar Fechamento</button>
+                        </div>
+                    </div>
+
+                    <div id="closing-section" class="card hidden" style="margin-top: 20px; max-width: none; overflow-x: auto;">
+                        <h3>Relatório de Fechamento</h3>
+                        <table class="full-table">
+                            <thead>
+                                <tr>
+                                    <th>Tipo</th>
+                                    <th>Jogadores</th>
+                                    <th>Duração</th>
+                                    <th>Valor Unit</th>
+                                    <th>Qtd</th>
+                                    <th>Total Coach</th>
+                                </tr>
+                            </thead>
+                            <tbody id="closing-table-body">
+                            </tbody>
+                            <tfoot>
+                                <tr style="font-weight: bold; background: #f0f0f0;">
+                                    <td colspan="4" style="text-align: right;">TOTAL:</td>
+                                    <td id="closing-total-qty">0</td>
+                                    <td id="closing-total-value">£ 0.00</td>
+                                </tr>
+                            </tfoot>
+                        </table>
                     </div>
 
                     <div class="card" style="margin-top: 20px; max-width: none; overflow-x: auto; padding: 10px 0;">

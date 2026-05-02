@@ -413,13 +413,73 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Bulk Actions
     const bulkFilterBtn = document.getElementById('bulk-filter-btn');
+    const generateClosingBtn = document.getElementById('generate-closing-btn');
+    const closingSection = document.getElementById('closing-section');
+    const closingTableBody = document.getElementById('closing-table-body');
     const bulkUpdateBtn = document.getElementById('bulk-update-btn');
     const bulkUpdateSection = document.getElementById('bulk-update-section');
     const btnShowBulkUpdate = document.getElementById('btn-show-bulk-update');
     const bulkActionTriggerContainer = document.getElementById('bulk-action-trigger-container');
     let filteredResults = [];
+
+    generateClosingBtn?.addEventListener('click', () => {
+        if (filteredResults.length === 0) {
+            return showToast('Primeiro realize um filtro para gerar o fechamento.', 'warning');
+        }
+
+        const aggregation = {};
+        let totalQty = 0;
+        let totalValue = 0;
+
+        filteredResults.forEach(l => {
+            const type = (l.lesson_type || 'Private').includes('Open') ? 'Open' : 'Private';
+            const duration = parseFloat(l.duration) || 1;
+            const durLabel = duration === 1.5 ? '90min' : `${duration * 60}min`;
+            const unitValue = parseFloat(l.coach_value) || 0;
+            
+            // For Open sessions, ignore players count
+            const players = type === 'Open' ? 'Open Group' : (l.players_count || '1-1');
+            const key = `${type}|${players}|${duration}|${unitValue}`;
+
+            if (!aggregation[key]) {
+                aggregation[key] = {
+                    type,
+                    players,
+                    durLabel,
+                    unitValue,
+                    qty: 0,
+                    total: 0
+                };
+            }
+            aggregation[key].qty++;
+            const lessonTotal = (unitValue * duration);
+            aggregation[key].total += lessonTotal;
+            totalQty++;
+            totalValue += lessonTotal;
+        });
+
+        const sortedKeys = Object.keys(aggregation).sort();
+        closingTableBody.innerHTML = sortedKeys.map(k => {
+            const item = aggregation[k];
+            return `
+                <tr>
+                    <td>${item.type}</td>
+                    <td>${item.players}</td>
+                    <td>${item.durLabel}</td>
+                    <td>£ ${item.unitValue.toFixed(2)}</td>
+                    <td>${item.qty}</td>
+                    <td>£ ${item.total.toFixed(2)}</td>
+                </tr>
+            `;
+        }).join('');
+
+        document.getElementById('closing-total-qty').textContent = totalQty;
+        document.getElementById('closing-total-value').textContent = `£ ${totalValue.toFixed(2)}`;
+        
+        closingSection.classList.remove('hidden');
+        closingSection.scrollIntoView({ behavior: 'smooth' });
+    });
 
     bulkFilterBtn?.addEventListener('click', async () => {
         try {
@@ -459,6 +519,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             bulkActionTriggerContainer?.classList.add('hidden');
             bulkUpdateSection?.classList.add('hidden');
+            closingSection?.classList.add('hidden');
 
             renderBulkPreview(filteredResults);
             
