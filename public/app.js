@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.font = 'bold 10px sans-serif';
             ctx.fillStyle = '#555';
             ctx.textAlign = 'center';
-            ctx.textBaseline = 'bottom'; 
+            ctx.textBaseline = 'top'; 
             data.datasets.forEach((dataset, i) => {
                 const meta = chart.getDatasetMeta(i);
                 meta.data.forEach((datapoint, index) => {
@@ -86,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         val = isPrivate ? '£ ****' : '£' + (typeof val === 'number' ? val.toFixed(2) : val);
                         if (chart.canvas.id === 'monthlyFinanceChart') val = isPrivate ? '£ ****' : '£' + Math.round(dataset.data[index]);
                     }
-                    ctx.fillText(val, datapoint.x, datapoint.y - 5);
+                    ctx.fillText(val, datapoint.x, datapoint.y + 5);
                 });
             });
             ctx.restore();
@@ -1319,6 +1319,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function chartOptions(integerY = false) {
         return {
             responsive: true, maintainAspectRatio: false,
+            layout: {
+                padding: {
+                    top: 25
+                }
+            },
             plugins: { legend: { display: false } },
             scales: { 
                 y: { 
