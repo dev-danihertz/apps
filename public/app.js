@@ -1150,7 +1150,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const monthLabel = `${month}/${year}`;
             const key = `${year}-${month}`;
             if (!monthlyData[key]) monthlyData[key] = { label: monthLabel, total: 0, count: 0 };
-            monthlyData[key].total += l.total_value;
+            monthlyData[key].total += (l.coach_value || 0);
             monthlyData[key].count++;
         });
         const sortedKeys = Object.keys(monthlyData).sort();
@@ -1163,7 +1163,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 datasets: [{
                     label: 'Avg Ticket (£)',
                     data: sortedKeys.map(k => (monthlyData[k].total / monthlyData[k].count)),
-                    backgroundColor: '#1976d2',
+                    backgroundColor: '#90caf9',
                     borderRadius: 5
                 }]
             },
