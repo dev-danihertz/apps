@@ -158,6 +158,35 @@ app.delete('/api/payment-methods/:id', isAuthenticated, (req, res) => {
   });
 });
 
+// COACH RATES ENDPOINTS
+app.get('/api/coach-rates', isAuthenticated, (req, res) => {
+  const userId = req.session.userId;
+  db.all("SELECT * FROM coach_rates WHERE user_id = ?", [userId], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+app.post('/api/coach-rates/bulk', isAuthenticated, (req, res) => {
+  const { rates } = req.body; // Array de { lesson_type, players_count, hourly_rate }
+  const userId = req.session.userId;
+
+  if (!rates || !Array.isArray(rates)) {
+    return res.status(400).json({ error: 'Rates array is required' });
+  }
+
+  db.serialize(() => {
+    const stmt = db.prepare("INSERT OR REPLACE INTO coach_rates (user_id, lesson_type, players_count, hourly_rate) VALUES (?, ?, ?, ?)");
+    rates.forEach(r => {
+      stmt.run([userId, r.lesson_type, r.players_count, r.hourly_rate]);
+    });
+    stmt.finalize((err) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ success: true });
+    });
+  });
+});
+
 app.get('/api/export', isAuthenticated, (req, res) => {
   const userId = req.session.userId;
   db.all("SELECT * FROM lessons WHERE user_id = ?", [userId], (err, rows) => {

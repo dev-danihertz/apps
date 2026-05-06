@@ -100,6 +100,34 @@ db.serialize(() => {
       });
     }
   });
+
+  // Tabela de Coach Rates
+  db.run(`CREATE TABLE IF NOT EXISTS coach_rates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    lesson_type TEXT NOT NULL,
+    players_count TEXT NOT NULL,
+    hourly_rate REAL NOT NULL,
+    UNIQUE(user_id, lesson_type, players_count),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  )`, (err) => {
+    if (!err) {
+      // Seed inicial se estiver vazia
+      db.get("SELECT COUNT(*) as count FROM coach_rates", (err, row) => {
+        if (row && row.count === 0) {
+          const types = ['Open', 'Private'];
+          const players = ['1-1', '1-2', '1-3', '1-4'];
+          types.forEach(type => {
+            players.forEach(player => {
+              const defaultRate = type === 'Private' ? 25 : 20;
+              db.run("INSERT INTO coach_rates (user_id, lesson_type, players_count, hourly_rate) VALUES (1, ?, ?, ?)", [type, player, defaultRate]);
+            });
+          });
+          console.log('Coach rates iniciais cadastrados.');
+        }
+      });
+    }
+  });
 });
 
 module.exports = db;

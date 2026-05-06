@@ -140,6 +140,35 @@ document.addEventListener('DOMContentLoaded', () => {
         updatePaymentSelects();
     }
 
+    async function loadCoachRates() {
+        const res = await fetch('/api/coach-rates');
+        const rates = await res.json();
+        rates.forEach(r => {
+            const input = document.querySelector(`.coach-rate-input[data-type="${r.lesson_type}"][data-players="${r.players_count}"]`);
+            if (input) input.value = r.hourly_rate;
+        });
+    }
+
+    document.getElementById('coach-rates-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const inputs = document.querySelectorAll('.coach-rate-input');
+        const rates = Array.from(inputs).map(input => ({
+            lesson_type: input.dataset.type,
+            players_count: input.dataset.players,
+            hourly_rate: parseFloat(input.value) || 0
+        }));
+
+        const res = await fetch('/api/coach-rates/bulk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rates })
+        });
+
+        if (res.ok) {
+            showToast('Coach rates updated!');
+        }
+    });
+
     function renderPaymentMethods() {
         const list = document.getElementById('payment-methods-list');
         if (paymentMethods.length === 0) {
@@ -275,13 +304,31 @@ document.addEventListener('DOMContentLoaded', () => {
         calculatePeakType();
     }
 
-    [startTimeInput, durationInput, valueInput, document.getElementById('date')].forEach(input => {
+    [startTimeInput, durationInput, valueInput, document.getElementById('date'), lessonTypeInput, playersInput].forEach(input => {
         input.addEventListener('input', () => {
             calculateTimes();
             calculateTotal();
             if (input.id === 'date' || input.id === 'start-time') calculatePeakType();
+            if (input.id === 'lesson-type' || input.id === 'players') updateRateFromConfig();
         });
+        if (input.tagName === 'SELECT') {
+            input.addEventListener('change', () => {
+                calculateTimes();
+                calculateTotal();
+                if (input.id === 'lesson-type' || input.id === 'players') updateRateFromConfig();
+            });
+        }
     });
+
+    function updateRateFromConfig() {
+        const type = lessonTypeInput.value;
+        const players = playersInput.value;
+        const input = document.querySelector(`.coach-rate-input[data-type="${type}"][data-players="${players}"]`);
+        if (input && input.value) {
+            valueInput.value = input.value;
+            calculateTotal();
+        }
+    }
 
     function calculatePeakType() {
         const dateStr = document.getElementById('date').value;
@@ -334,7 +381,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (targetTab === 'records') loadLessons();
             if (targetTab === 'graphics') updateGraphics();
             if (targetTab === 'regtab') loadRegTab();
-            if (targetTab === 'cadastros') loadPaymentMethods();
+            if (targetTab === 'cadastros') {
+                loadPaymentMethods();
+                loadCoachRates();
+            }
         });
     });
 
@@ -1465,5 +1515,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     cancelEdit();
     loadPaymentMethods();
+    loadCoachRates();
     console.log('App.js finalizado!');
 });
