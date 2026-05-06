@@ -168,21 +168,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('coach-rates-form')?.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const inputs = document.querySelectorAll('.coach-rate-input');
-        const rates = Array.from(inputs).map(input => ({
-            lesson_type: input.dataset.type,
-            players_count: input.dataset.players,
-            hourly_rate: parseFloat(input.value) || 0
-        }));
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        const originalBtnText = submitBtn.textContent;
+        
+        try {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Saving...';
 
-        const res = await fetch('/api/coach-rates/bulk', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ rates })
-        });
+            const inputs = document.querySelectorAll('.coach-rate-input');
+            const rates = Array.from(inputs).map(input => ({
+                lesson_type: input.dataset.type,
+                players_count: input.dataset.players,
+                hourly_rate: parseFloat(input.value) || 0
+            }));
 
-        if (res.ok) {
-            showToast('Coach rates updated!');
+            const res = await fetch('/api/coach-rates/bulk', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rates })
+            });
+
+            if (res.ok) {
+                showToast('Coach rates saved successfully!');
+            } else {
+                const errorData = await res.json();
+                showToast('Error: ' + (errorData.error || 'Failed to save rates'), 'error');
+            }
+        } catch (err) {
+            console.error('Error saving coach rates:', err);
+            showToast('Technical error saving rates', 'error');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalBtnText;
         }
     });
 
