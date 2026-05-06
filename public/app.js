@@ -816,16 +816,16 @@ document.addEventListener('DOMContentLoaded', () => {
             return parseInt(y) === currentYear && parseInt(m) === currentMonth;
         });
 
-        const pastLessons = monthLessons.filter(l => l.date < today);
-        const futureLessons = monthLessons.filter(l => l.date >= today);
+        const completedLessons = monthLessons.filter(l => l.session_status === 'Completed');
+        const plannedLessonsMonth = monthLessons.filter(l => l.session_status === 'Planned');
         
-        const pastCount = pastLessons.length;
-        const futureCount = futureLessons.length;
+        const completedCount = completedLessons.length;
+        const plannedCount = plannedLessonsMonth.length;
         const totalCount = monthLessons.length;
 
-        const pastRevenue = pastLessons.reduce((sum, l) => sum + (parseFloat(l.total_value) || 0), 0);
-        const futureRevenue = futureLessons.reduce((sum, l) => sum + (parseFloat(l.total_value) || 0), 0);
-        const totalRevenue = pastRevenue + futureRevenue;
+        const completedRevenue = completedLessons.reduce((sum, l) => sum + (parseFloat(l.total_value) || 0), 0);
+        const plannedRevenue = plannedLessonsMonth.reduce((sum, l) => sum + (parseFloat(l.total_value) || 0), 0);
+        const totalRevenue = completedRevenue + plannedRevenue;
 
         const formatCurrency = (val) => isPrivate ? '£ ****' : `£ ${val.toFixed(2)}`;
 
@@ -836,13 +836,13 @@ document.addEventListener('DOMContentLoaded', () => {
             <div style="font-size: 2rem; font-weight: bold; color: #333; margin-bottom: 15px;">${formatCurrency(totalRevenue)}</div>
             <div style="display: flex; justify-content: space-around; padding: 10px; background: #f9f9f9; border-radius: 12px;">
                 <div style="flex: 1;">
-                    <div style="font-size: 0.75rem; color: #888;">PAST</div>
-                    <div style="font-size: 1.1rem; font-weight: bold; color: #1976d2;">${formatCurrency(pastRevenue)}</div>
+                    <div style="font-size: 0.75rem; color: #888;">COMPLETED</div>
+                    <div style="font-size: 1.1rem; font-weight: bold; color: #1976d2;">${formatCurrency(completedRevenue)}</div>
                 </div>
                 <div style="width: 1px; background: #ddd; margin: 0 10px;"></div>
                 <div style="flex: 1;">
-                    <div style="font-size: 0.75rem; color: #888;">UPCOMING</div>
-                    <div style="font-size: 1.1rem; font-weight: bold; color: #4caf50;">${formatCurrency(futureRevenue)}</div>
+                    <div style="font-size: 0.75rem; color: #888;">PLANNED</div>
+                    <div style="font-size: 1.1rem; font-weight: bold; color: #4caf50;">${formatCurrency(plannedRevenue)}</div>
                 </div>
             </div>
         `;
@@ -886,9 +886,9 @@ document.addEventListener('DOMContentLoaded', () => {
         currentMonthDoughnut = new Chart(ctx, {
             type: 'doughnut',
             data: {
-                labels: ['Past', 'Upcoming'],
+                labels: ['Completed', 'Planned'],
                 datasets: [{
-                    data: [pastCount, futureCount],
+                    data: [completedCount, plannedCount],
                     backgroundColor: ['#1976d2', '#4caf50'],
                     borderWidth: 2,
                     borderColor: '#ffffff',
@@ -924,15 +924,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     ctx.font = 'bold 14px sans-serif';
                     ctx.fillStyle = '#1976d2';
                     ctx.textAlign = 'right';
-                    ctx.fillText(pastCount, width / 2 - 45, height / 2 + 5);
+                    ctx.fillText(completedCount, width / 2 - 45, height / 2 + 5);
                     ctx.font = '9px sans-serif';
-                    ctx.fillText('PAST', width / 2 - 45, height / 2 + 18);
+                    ctx.fillText('DONE', width / 2 - 45, height / 2 + 18);
                     ctx.font = 'bold 14px sans-serif';
                     ctx.fillStyle = '#4caf50';
                     ctx.textAlign = 'left';
-                    ctx.fillText(futureCount, width / 2 + 45, height / 2 + 5);
+                    ctx.fillText(plannedCount, width / 2 + 45, height / 2 + 5);
                     ctx.font = '9px sans-serif';
-                    ctx.fillText('FUTURE', width / 2 + 45, height / 2 + 18);
+                    ctx.fillText('PLAN', width / 2 + 45, height / 2 + 18);
                     ctx.restore();
                 }
             }]
