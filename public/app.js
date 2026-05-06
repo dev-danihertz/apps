@@ -133,6 +133,23 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Payment Methods Management
+    // Accordion logic for Cadastros
+    document.querySelectorAll('.accordion-header').forEach(header => {
+        header.addEventListener('click', () => {
+            const content = header.nextElementSibling;
+            const isHidden = content.classList.contains('hidden');
+            
+            // Close all other accordions
+            document.querySelectorAll('.accordion-content').forEach(c => c.classList.add('hidden'));
+            document.querySelectorAll('.chevron').forEach(ch => ch.textContent = '▼');
+
+            if (isHidden) {
+                content.classList.remove('hidden');
+                header.querySelector('.chevron').textContent = '▲';
+            }
+        });
+    });
+
     async function loadPaymentMethods() {
         const res = await fetch('/api/payment-methods');
         paymentMethods = await res.json();
