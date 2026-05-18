@@ -26,10 +26,8 @@ app.use(session({
 app.use(express.static(path.join(__dirname, 'public')));
 
 const isAuthenticated = (req, res, next) => {
-  // if (req.session.userId) return next();
-  // res.status(401).json({ error: 'Not authorized' });
-  req.session.userId = 1; // Force user ID to 1
-  return next();
+  if (req.session.userId) return next();
+  res.status(401).json({ error: 'Not authorized' });
 };
 
 app.post('/api/login', (req, res) => {
