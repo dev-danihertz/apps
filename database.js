@@ -20,22 +20,43 @@ db.serialize(() => {
       db.all("PRAGMA table_info(users)", (err, columns) => {
         if (!err) {
           const colNames = columns.map(c => c.name);
-          if (!colNames.includes('name')) {
-            console.log("Adicionando coluna 'name' na tabela users...");
-            db.run("ALTER TABLE users ADD COLUMN name TEXT;");
-          }
-          if (!colNames.includes('reset_token')) {
-            console.log("Adicionando coluna 'reset_token' na tabela users...");
-            db.run("ALTER TABLE users ADD COLUMN reset_token TEXT;");
-          }
-          if (!colNames.includes('reset_expiry')) {
-            console.log("Adicionando coluna 'reset_expiry' na tabela users...");
-            db.run("ALTER TABLE users ADD COLUMN reset_expiry INTEGER;");
-          }
+          const tasks = [];
+          if (!colNames.includes('name')) tasks.push("ALTER TABLE users ADD COLUMN name TEXT;");
+          if (!colNames.includes('reset_token')) tasks.push("ALTER TABLE users ADD COLUMN reset_token TEXT;");
+          if (!colNames.includes('reset_expiry')) tasks.push("ALTER TABLE users ADD COLUMN reset_expiry INTEGER;");
+
+          const runTasks = (idx) => {
+            if (idx < tasks.length) {
+              console.log(`Executando migração na tabela users: ${tasks[idx]}`);
+              db.run(tasks[idx], (err) => {
+                if (err) console.error("Erro na migração:", err.message);
+                runTasks(idx + 1);
+              });
+            } else {
+              seedDefaultUser();
+            }
+          };
+          runTasks(0);
         }
       });
     }
   });
+
+  function seedDefaultUser() {
+    const defaultEmail = 'daniucs@gmail.com';
+    const defaultPassword = '1243';
+    const defaultName = 'Dani';
+    
+    db.get("SELECT id FROM users WHERE email = ? OR email = 'admin'", [defaultEmail], (err, row) => {
+      if (!row) {
+        const hashedPassword = bcrypt.hashSync(defaultPassword, 10);
+        db.run("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", [defaultEmail, hashedPassword, defaultName]);
+        console.log('Usuário padrão criado com sucesso.');
+      } else if (row) {
+        db.run("UPDATE users SET email = ?, name = ? WHERE id = ?", [defaultEmail, defaultName, row.id]);
+      }
+    });
+  }
 
   // Tabela de aulas
   db.run(`CREATE TABLE IF NOT EXISTS lessons (
@@ -58,18 +79,13 @@ db.serialize(() => {
     FOREIGN KEY (user_id) REFERENCES users(id)
   )`, (err) => {
     if (!err) {
-      // Sistema de Migração Robusto
       db.all("PRAGMA table_info(lessons)", (err, columns) => {
         if (!err) {
           const colNames = columns.map(c => c.name);
-          
-          // 1. Migrar 'name' para 'client_name' se necessário
           if (colNames.includes('name') && !colNames.includes('client_name')) {
-            console.log("Migrando 'name' -> 'client_name'...");
             db.run("ALTER TABLE lessons RENAME COLUMN name TO client_name;");
           }
 
-          // 2. Adicionar colunas faltantes uma por uma
           const requiredColumns = [
             { name: 'client_name', type: 'TEXT' },
             { name: 'peak_type', type: 'TEXT' },
@@ -81,29 +97,12 @@ db.serialize(() => {
           ];
 
           requiredColumns.forEach(col => {
-            if (!colNames.includes(col.name) && col.name !== 'client_name') { // client_name já tratado no rename
-              console.log(`Adicionando coluna faltante: ${col.name}...`);
+            if (!colNames.includes(col.name) && col.name !== 'client_name') {
               db.run(`ALTER TABLE lessons ADD COLUMN ${col.name} ${col.type};`);
             }
           });
         }
       });
-    }
-  });
-
-  // Usuário padrão: daniucs@gmail.com / 1243
-  const defaultEmail = 'daniucs@gmail.com';
-  const defaultPassword = '1243';
-  const defaultName = 'Dani';
-  
-  db.get("SELECT id FROM users WHERE email = ? OR email = 'admin'", [defaultEmail], (err, row) => {
-    if (!row) {
-      const hashedPassword = bcrypt.hashSync(defaultPassword, 10);
-      db.run("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", [defaultEmail, hashedPassword, defaultName]);
-      console.log('Usuário padrão criado com sucesso.');
-    } else if (row) {
-      // Se ainda estiver como 'admin', atualiza para o novo e-mail e define o nome
-      db.run("UPDATE users SET email = ?, name = ? WHERE id = ?", [defaultEmail, defaultName, row.id]);
     }
   });
 
@@ -115,14 +114,12 @@ db.serialize(() => {
     FOREIGN KEY (user_id) REFERENCES users(id)
   )`, (err) => {
     if (!err) {
-      // Seed inicial se estiver vazia
       db.get("SELECT COUNT(*) as count FROM payment_methods", (err, row) => {
         if (row && row.count === 0) {
           const methods = ['Bank Transfer', 'Cash', 'Card', 'App', 'Voucher', 'Membership', 'Kevin Student', 'Playtomic', 'Myself'];
           methods.forEach(m => {
             db.run("INSERT INTO payment_methods (user_id, name) VALUES (1, ?)", [m]);
           });
-          console.log('Métodos de pagamento iniciais cadastrados.');
         }
       });
     }
@@ -139,7 +136,6 @@ db.serialize(() => {
     FOREIGN KEY (user_id) REFERENCES users(id)
   )`, (err) => {
     if (!err) {
-      // Seed inicial se estiver vazia
       db.get("SELECT COUNT(*) as count FROM coach_rates", (err, row) => {
         if (row && row.count === 0) {
           const types = ['Open', 'Private'];
@@ -150,7 +146,6 @@ db.serialize(() => {
               db.run("INSERT INTO coach_rates (user_id, lesson_type, players_count, hourly_rate) VALUES (1, ?, ?, ?)", [type, player, defaultRate]);
             });
           });
-          console.log('Coach rates iniciais cadastrados.');
         }
       });
     }
