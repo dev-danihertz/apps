@@ -79,8 +79,8 @@
                 <h2>Padel Login</h2>
                 <form id="login-form">
                     <div class="form-group">
-                        <label for="email">Username</label>
-                        <input type="text" id="email" value="admin" required>
+                        <label for="email">Email</label>
+                        <input type="email" id="email" value="daniucs@gmail.com" required>
                     </div>
                     <div class="form-group">
                         <label for="password">Password</label>
@@ -88,7 +88,81 @@
                     </div>
                     <button type="submit" class="btn-primary">Login</button>
                 </form>
+                <div style="margin-top: 15px; text-align: center; display: flex; flex-direction: column; gap: 10px;">
+                    <p style="font-size: 0.9rem; color: #666;">Don't have an account? <a href="#" id="go-to-register" style="color: var(--primary); font-weight: bold; text-decoration: none;">Register</a></p>
+                    <p style="font-size: 0.9rem;"><a href="#" id="go-to-forgot" style="color: #666; text-decoration: none;">Forgot Password?</a></p>
+                </div>
                 <p id="login-error" class="error"></p>
+            </div>
+        </section>
+
+        <!-- Forgot Password Screen -->
+        <section id="forgot-screen" class="screen hidden">
+            <div class="card">
+                <h2>Recover Password</h2>
+                <p style="font-size: 0.9rem; color: #666; margin-bottom: 20px; text-align: center;">Enter your email and we'll send you a link to reset your password.</p>
+                <form id="forgot-form">
+                    <div class="form-group">
+                        <label for="forgot-email">Email</label>
+                        <input type="email" id="forgot-email" placeholder="email@example.com" required>
+                    </div>
+                    <button type="submit" class="btn-primary">Send Reset Link</button>
+                </form>
+                <div style="margin-top: 15px; text-align: center;">
+                    <p style="font-size: 0.9rem; color: #666;"><a href="#" class="back-to-login" style="color: var(--primary); font-weight: bold; text-decoration: none;">Back to Login</a></p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Reset Password Screen -->
+        <section id="reset-screen" class="screen hidden">
+            <div class="card">
+                <h2>New Password</h2>
+                <p style="font-size: 0.9rem; color: #666; margin-bottom: 20px; text-align: center;">Enter your new password below.</p>
+                <form id="reset-form">
+                    <input type="hidden" id="reset-token-input">
+                    <div class="form-group">
+                        <label for="new-password">New Password</label>
+                        <input type="password" id="new-password" placeholder="At least 6 characters" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirm-new-password">Confirm New Password</label>
+                        <input type="password" id="confirm-new-password" placeholder="Repeat new password" required>
+                    </div>
+                    <button type="submit" class="btn-primary">Update Password</button>
+                </form>
+                <div style="margin-top: 15px; text-align: center;">
+                    <p style="font-size: 0.9rem; color: #666;"><a href="#" class="back-to-login" style="color: var(--primary); font-weight: bold; text-decoration: none;">Back to Login</a></p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Register Screen -->
+        <section id="register-screen" class="screen hidden">
+            <div class="card">
+                <h2>Create Account</h2>
+                <form id="register-form">
+                    <div class="form-group">
+                        <label for="reg-name">Name</label>
+                        <input type="text" id="reg-name" placeholder="Your Name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-email">Email</label>
+                        <input type="email" id="reg-email" placeholder="email@example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-password">Password</label>
+                        <input type="password" id="reg-password" placeholder="At least 6 characters" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-confirm-password">Confirm Password</label>
+                        <input type="password" id="reg-confirm-password" placeholder="Repeat your password" required>
+                    </div>
+                    <button type="submit" class="btn-primary">Create Account</button>
+                </form>
+                <div style="margin-top: 15px; text-align: center;">
+                    <p style="font-size: 0.9rem; color: #666;">Already have an account? <a href="#" id="go-to-login" style="color: var(--primary); font-weight: bold; text-decoration: none;">Login</a></p>
+                </div>
             </div>
         </section>
 
@@ -583,6 +657,36 @@
                         <button id="import-btn" class="btn-primary" style="background-color: #2196F3;">Import Backup</button>
                     </div>
                 </div>
+
+                <!-- Profile Tab -->
+                <div id="tab-profile" class="tab-pane hidden">
+                    <div class="card">
+                        <h3>My Profile</h3>
+                        <form id="profile-form">
+                            <div class="form-group">
+                                <label for="prof-name">Full Name</label>
+                                <input type="text" id="prof-name" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="prof-email">Email (Login Identifier)</label>
+                                <input type="email" id="prof-email" required>
+                            </div>
+                            <div style="margin: 20px 0; padding-top: 15px; border-top: 1px solid #eee;">
+                                <h4 style="margin-bottom: 10px;">Change Password</h4>
+                                <p style="font-size: 0.8rem; color: #888; margin-bottom: 15px;">Leave blank to keep your current password.</p>
+                                <div class="form-group">
+                                    <label for="prof-password">New Password</label>
+                                    <input type="password" id="prof-password" placeholder="Min. 6 characters">
+                                </div>
+                                <div class="form-group">
+                                    <label for="prof-confirm-password">Confirm New Password</label>
+                                    <input type="password" id="prof-confirm-password" placeholder="Repeat new password">
+                                </div>
+                            </div>
+                            <button type="submit" class="btn-primary">Save Changes</button>
+                        </form>
+                    </div>
+                </div>
             </div>
 
             <!-- Bottom Navigation -->
@@ -618,6 +722,10 @@
                 <button class="nav-item" data-tab="bulk">
                     <span class="icon">⚙️</span>
                     <span class="label">Bulk Actions</span>
+                </button>
+                <button class="nav-item" data-tab="profile">
+                    <span class="icon">👤</span>
+                    <span class="label">Profile</span>
                 </button>
             </nav>
         </section>

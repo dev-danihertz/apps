@@ -11,8 +11,31 @@ db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     email TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL
-  )`);
+    password TEXT NOT NULL,
+    name TEXT,
+    reset_token TEXT,
+    reset_expiry INTEGER
+  )`, (err) => {
+    if (!err) {
+      db.all("PRAGMA table_info(users)", (err, columns) => {
+        if (!err) {
+          const colNames = columns.map(c => c.name);
+          if (!colNames.includes('name')) {
+            console.log("Adicionando coluna 'name' na tabela users...");
+            db.run("ALTER TABLE users ADD COLUMN name TEXT;");
+          }
+          if (!colNames.includes('reset_token')) {
+            console.log("Adicionando coluna 'reset_token' na tabela users...");
+            db.run("ALTER TABLE users ADD COLUMN reset_token TEXT;");
+          }
+          if (!colNames.includes('reset_expiry')) {
+            console.log("Adicionando coluna 'reset_expiry' na tabela users...");
+            db.run("ALTER TABLE users ADD COLUMN reset_expiry INTEGER;");
+          }
+        }
+      });
+    }
+  });
 
   // Tabela de aulas
   db.run(`CREATE TABLE IF NOT EXISTS lessons (
@@ -68,15 +91,19 @@ db.serialize(() => {
     }
   });
 
-  // Usuário padrão: admin / 1243
-  const email = 'admin';
-  const password = '1243';
+  // Usuário padrão: daniucs@gmail.com / 1243
+  const defaultEmail = 'daniucs@gmail.com';
+  const defaultPassword = '1243';
+  const defaultName = 'Dani';
   
-  db.get("SELECT id FROM users WHERE email = ?", [email], (err, row) => {
+  db.get("SELECT id FROM users WHERE email = ? OR email = 'admin'", [defaultEmail], (err, row) => {
     if (!row) {
-      const hashedPassword = bcrypt.hashSync(password, 10);
-      db.run("INSERT INTO users (email, password) VALUES (?, ?)", [email, hashedPassword]);
+      const hashedPassword = bcrypt.hashSync(defaultPassword, 10);
+      db.run("INSERT INTO users (email, password, name) VALUES (?, ?, ?)", [defaultEmail, hashedPassword, defaultName]);
       console.log('Usuário padrão criado com sucesso.');
+    } else if (row) {
+      // Se ainda estiver como 'admin', atualiza para o novo e-mail e define o nome
+      db.run("UPDATE users SET email = ?, name = ? WHERE id = ?", [defaultEmail, defaultName, row.id]);
     }
   });
 

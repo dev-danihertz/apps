@@ -243,6 +243,7 @@ input:focus {
     color: var(--primary);
     font-weight: 600;
     padding: 5px;
+    cursor: pointer;
 }
 
 .error {

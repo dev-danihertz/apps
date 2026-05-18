@@ -2,11 +2,15 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM carregado, iniciando componentes...');
     
     const loginForm = document.getElementById('login-form');
+    const registerForm = document.getElementById('register-form');
     const lessonForm = document.getElementById('lesson-form');
     const payForm = document.getElementById('pay-form');
     const payModal = document.getElementById('pay-modal');
     
     const loginScreen = document.getElementById('login-screen');
+    const registerScreen = document.getElementById('register-screen');
+    const forgotScreen = document.getElementById('forgot-screen');
+    const resetScreen = document.getElementById('reset-screen');
     const dashboardScreen = document.getElementById('dashboard-screen');
     const lessonsList = document.getElementById('lessons-list');
     const logoutBtn = document.getElementById('logout-btn');
@@ -409,7 +413,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const targetPane = document.getElementById(`tab-${targetTab}`);
             targetPane.classList.remove('hidden');
             
-            const titles = { dashboard: 'Dashboard', insert: 'Insert Lesson', records: 'My Records', graphics: 'Performance', regtab: 'Full Records', data: 'Manage Data', bulk: 'Bulk Actions', cadastros: 'Payment Methods' };
+            const titles = { 
+                dashboard: 'Dashboard', 
+                insert: 'Insert Lesson', 
+                records: 'My Records', 
+                graphics: 'Performance', 
+                regtab: 'Full Records', 
+                data: 'Manage Data', 
+                bulk: 'Bulk Actions', 
+                cadastros: 'Payment Methods',
+                profile: 'My Profile'
+            };
             tabTitle.textContent = titles[targetTab];
             if (targetTab === 'dashboard') loadDashboard();
             if (targetTab === 'records') loadLessons();
@@ -419,7 +433,57 @@ document.addEventListener('DOMContentLoaded', () => {
                 loadPaymentMethods();
                 loadCoachRates();
             }
+            if (targetTab === 'profile') loadUserProfile();
         });
+    });
+
+    async function loadUserProfile() {
+        const res = await fetch('/api/user/profile');
+        if (res.ok) {
+            const user = await res.json();
+            document.getElementById('prof-name').value = user.name || '';
+            document.getElementById('prof-email').value = user.email || '';
+            document.getElementById('prof-password').value = '';
+            document.getElementById('prof-confirm-password').value = '';
+        }
+    }
+
+    document.getElementById('profile-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('prof-name').value.trim();
+        const email = document.getElementById('prof-email').value.trim();
+        const password = document.getElementById('prof-password').value;
+        const confirmPassword = document.getElementById('prof-confirm-password').value;
+
+        if (password && password.length < 6) {
+            return showToast('New password must be at least 6 characters.', 'error');
+        }
+
+        if (password !== confirmPassword) {
+            return showToast('Passwords do not match.', 'error');
+        }
+
+        showLoading('Updating profile...');
+        try {
+            const res = await fetch('/api/user/profile', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, password })
+            });
+
+            if (res.ok) {
+                showToast('Profile updated successfully!');
+                document.getElementById('prof-password').value = '';
+                document.getElementById('prof-confirm-password').value = '';
+            } else {
+                const data = await res.json();
+                showToast(data.error || 'Update failed.', 'error');
+            }
+        } catch (err) {
+            showToast('Network error updating profile.', 'error');
+        } finally {
+            hideLoading();
+        }
     });
 
     // RegTab Logic
@@ -764,7 +828,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.loggedIn) {
                 showDashboard();
             } else {
-                showLogin();
+                // Check for reset token in URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const token = urlParams.get('resetToken');
+                if (token) {
+                    showReset(token);
+                } else {
+                    showLogin();
+                }
             }
         } catch (err) {
             showLogin();
@@ -866,6 +937,178 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('close-pay-modal').addEventListener('click', () => payModal.classList.add('hidden'));
 
+    function showLogin() {
+        loginScreen.classList.remove('hidden');
+        registerScreen.classList.add('hidden');
+        forgotScreen.classList.add('hidden');
+        resetScreen.classList.add('hidden');
+        dashboardScreen.classList.add('hidden');
+        document.getElementById('email').value = '';
+        document.getElementById('password').value = '';
+    }
+
+    function showRegister() {
+        loginScreen.classList.add('hidden');
+        registerScreen.classList.remove('hidden');
+        forgotScreen.classList.add('hidden');
+        resetScreen.classList.add('hidden');
+        dashboardScreen.classList.add('hidden');
+        registerForm.reset();
+    }
+
+    function showForgot() {
+        loginScreen.classList.add('hidden');
+        registerScreen.classList.add('hidden');
+        forgotScreen.classList.remove('hidden');
+        resetScreen.classList.add('hidden');
+        dashboardScreen.classList.add('hidden');
+        document.getElementById('forgot-form').reset();
+    }
+
+    function showReset(token) {
+        loginScreen.classList.add('hidden');
+        registerScreen.classList.add('hidden');
+        forgotScreen.classList.add('hidden');
+        resetScreen.classList.remove('hidden');
+        dashboardScreen.classList.add('hidden');
+        document.getElementById('reset-token-input').value = token;
+        document.getElementById('reset-form').reset();
+    }
+
+    document.getElementById('go-to-register').addEventListener('click', (e) => {
+        e.preventDefault();
+        showRegister();
+    });
+
+    document.getElementById('go-to-login').addEventListener('click', (e) => {
+        e.preventDefault();
+        showLogin();
+    });
+
+    document.getElementById('go-to-forgot').addEventListener('click', (e) => {
+        e.preventDefault();
+        showForgot();
+    });
+
+    document.querySelectorAll('.back-to-login').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            showLogin();
+        });
+    });
+
+    registerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('reg-name').value.trim();
+        const email = document.getElementById('reg-email').value.trim();
+        const password = document.getElementById('reg-password').value;
+        const confirmPassword = document.getElementById('reg-confirm-password').value;
+
+        // Validações
+        if (!name || !email || !password) {
+            return showToast('Please fill in all fields.', 'error');
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return showToast('Please enter a valid email address.', 'error');
+        }
+
+        if (password.length < 6) {
+            return showToast('Password must be at least 6 characters long.', 'error');
+        }
+
+        if (password !== confirmPassword) {
+            return showToast('Passwords do not match.', 'error');
+        }
+
+        showLoading('Creating your account...');
+        try {
+            const res = await fetch('/api/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, password })
+            });
+
+            if (res.ok) {
+                showToast('Account created! You can now login.');
+                showLogin();
+            } else {
+                const data = await res.json();
+                showToast(data.error || 'Registration failed.', 'error');
+            }
+        } catch (err) {
+            showToast('Network error during registration.', 'error');
+        } finally {
+            hideLoading();
+        }
+    });
+
+    document.getElementById('forgot-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('forgot-email').value.trim();
+        if (!email) return;
+
+        showLoading('Sending recovery email...');
+        try {
+            const res = await fetch('/api/forgot-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+
+            if (res.ok) {
+                showToast('Reset link sent to your email!');
+                showLogin();
+            } else {
+                const data = await res.json();
+                showToast(data.error || 'Failed to send reset link.', 'error');
+            }
+        } catch (err) {
+            showToast('Network error.', 'error');
+        } finally {
+            hideLoading();
+        }
+    });
+
+    document.getElementById('reset-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const token = document.getElementById('reset-token-input').value;
+        const password = document.getElementById('new-password').value;
+        const confirmPassword = document.getElementById('confirm-new-password').value;
+
+        if (password.length < 6) {
+            return showToast('Password must be at least 6 characters long.', 'error');
+        }
+
+        if (password !== confirmPassword) {
+            return showToast('Passwords do not match.', 'error');
+        }
+
+        showLoading('Updating password...');
+        try {
+            const res = await fetch('/api/reset-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token, password })
+            });
+
+            if (res.ok) {
+                showToast('Password updated successfully! You can now login.');
+                showLogin();
+                // Clear token from URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+            } else {
+                const data = await res.json();
+                showToast(data.error || 'Failed to update password.', 'error');
+            }
+        } catch (err) {
+            showToast('Network error.', 'error');
+        } finally {
+            hideLoading();
+        }
+    });
+
     logoutBtn.addEventListener('click', async () => {
         await fetch('/api/logout', { method: 'POST' });
         showLogin();
@@ -874,6 +1117,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function showDashboard() {
         loginScreen.classList.add('hidden');
+        registerScreen.classList.add('hidden');
+        forgotScreen.classList.add('hidden');
+        resetScreen.classList.add('hidden');
         dashboardScreen.classList.remove('hidden');
         loadDashboard();
     }

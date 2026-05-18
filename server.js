@@ -2,6 +2,8 @@ const express = require('express');
 const session = require('express-session');
 const bodyParser = require('body-parser');
 const bcrypt = require('bcryptjs');
+const nodemailer = require('nodemailer');
+const crypto = require('crypto');
 const db = require('./database');
 const path = require('path');
 
@@ -51,13 +53,116 @@ app.post('/api/login', (req, res) => {
 });
 
 app.post('/api/logout', (req, res) => {
-  req.session.destroy();
-  res.json({ message: 'Logged out' });
+  req.session.destroy((err) => {
+    if (err) {
+      return res.status(500).json({ error: 'Could not log out' });
+    }
+    res.clearCookie('connect.sid'); // Nome padrão do cookie do express-session
+    res.json({ message: 'Logged out' });
+  });
+});
+
+// Configuração do Nodemailer (Gmail)
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: 'daniucs@gmail.com',
+    pass: process.env.EMAIL_PASS || 'cdrdwfczbexzdtdv' // Usa variável de ambiente ou fallback local
+  }
+});
+
+app.post('/api/forgot-password', (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'E-mail é obrigatório.' });
+
+  db.get("SELECT id FROM users WHERE email = ?", [email], (err, user) => {
+    if (err) return res.status(500).json({ error: 'Erro no banco de dados.' });
+    if (!user) return res.status(404).json({ error: 'E-mail não encontrado.' });
+
+    const token = crypto.randomBytes(20).toString('hex');
+    const expiry = Date.now() + 3600000; // 1 hora
+
+    db.run("UPDATE users SET reset_token = ?, reset_expiry = ? WHERE id = ?", [token, expiry, user.id], (err) => {
+      if (err) return res.status(500).json({ error: 'Erro ao gerar token.' });
+
+      const resetUrl = `https://apps-coaching.fly.dev/?resetToken=${token}`;
+      
+      const mailOptions = {
+        from: 'daniucs@gmail.com',
+        to: email,
+        subject: 'Padel App - Password Reset',
+        text: `You requested a password reset. Please click on the link below to reset your password:\n\n${resetUrl}\n\nThis link will expire in 1 hour.`
+      };
+
+      transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          console.error('Erro ao enviar e-mail:', error);
+          return res.status(500).json({ error: 'Erro ao enviar e-mail de recuperação.' });
+        }
+        res.json({ message: 'E-mail de recuperação enviado!' });
+      });
+    });
+  });
+});
+
+app.post('/api/reset-password', (req, res) => {
+  const { token, password } = req.body;
+  if (!token || !password) return res.status(400).json({ error: 'Dados incompletos.' });
+
+  db.get("SELECT id FROM users WHERE reset_token = ? AND reset_expiry > ?", [token, Date.now()], (err, user) => {
+    if (err) return res.status(500).json({ error: 'Erro no banco de dados.' });
+    if (!user) return res.status(400).json({ error: 'Token inválido ou expirado.' });
+
+    const hashedPassword = bcrypt.hashSync(password, 10);
+    db.run("UPDATE users SET password = ?, reset_token = NULL, reset_expiry = NULL WHERE id = ?", [hashedPassword, user.id], (err) => {
+      if (err) return res.status(500).json({ error: 'Erro ao atualizar senha.' });
+      res.json({ message: 'Senha atualizada com sucesso!' });
+    });
+  });
 });
 
 app.get('/api/check-session', (req, res) => {
-  req.session.userId = 1;
-  res.json({ loggedIn: true, email: 'admin' });
+  if (req.session.userId) {
+    res.json({ loggedIn: true, email: req.session.email });
+  } else {
+    res.json({ loggedIn: false });
+  }
+});
+
+app.get('/api/user/profile', isAuthenticated, (req, res) => {
+  const userId = req.session.userId;
+  db.get("SELECT name, email FROM users WHERE id = ?", [userId], (err, user) => {
+    if (err) return res.status(500).json({ error: 'Erro ao buscar perfil.' });
+    res.json(user);
+  });
+});
+
+app.put('/api/user/profile', isAuthenticated, (req, res) => {
+  const userId = req.session.userId;
+  const { name, email, password } = req.body;
+
+  if (!name || !email) {
+    return res.status(400).json({ error: 'Nome e e-mail são obrigatórios.' });
+  }
+
+  let query = "UPDATE users SET name = ?, email = ? WHERE id = ?";
+  let params = [name, email, userId];
+
+  if (password) {
+    query = "UPDATE users SET name = ?, email = ?, password = ? WHERE id = ?";
+    params = [name, email, bcrypt.hashSync(password, 10), userId];
+  }
+
+  db.run(query, params, function(err) {
+    if (err) {
+      if (err.message.includes('UNIQUE')) {
+        return res.status(400).json({ error: 'E-mail já está em uso.' });
+      }
+      return res.status(500).json({ error: 'Erro ao atualizar perfil.' });
+    }
+    req.session.email = email; // Atualiza o e-mail na sessão
+    res.json({ message: 'Perfil atualizado com sucesso!' });
+  });
 });
 
 app.post('/api/lessons', isAuthenticated, (req, res) => {
