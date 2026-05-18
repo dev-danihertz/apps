@@ -1031,7 +1031,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const plannedLessons = lessons.filter(l => (l.session_status || 'Planned') === 'Planned');
+        const plannedLessons = lessons
+            .filter(l => (l.session_status || 'Planned') === 'Planned')
+            .sort((a, b) => a.date.localeCompare(b.date) || a.start_time.localeCompare(b.start_time));
         const completedLessons = lessons.filter(l => l.session_status === 'Completed');
 
         let html = '';

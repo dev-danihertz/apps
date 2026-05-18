@@ -86,7 +86,7 @@ app.post('/api/lessons', isAuthenticated, (req, res) => {
 
 app.get('/api/lessons', isAuthenticated, (req, res) => {
   const userId = req.session.userId;
-  db.all("SELECT *, (coach_value * duration) as total_value FROM lessons WHERE user_id = ? ORDER BY date DESC", [userId], (err, rows) => {
+  db.all("SELECT *, (coach_value * duration) as total_value FROM lessons WHERE user_id = ? ORDER BY date DESC, start_time DESC", [userId], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
   });
