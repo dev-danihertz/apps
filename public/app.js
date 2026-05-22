@@ -241,12 +241,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updatePaymentSelects() {
         const selects = [paymentMethodInput, payMethodModalInput];
+        
+        // If paymentMethods is empty, try to reload once
+        if (paymentMethods.length === 0) {
+            console.log('Payment methods empty, reloading...');
+            // This is async but we don't await it to avoid blocking UI, 
+            // the next call will have them.
+            loadPaymentMethods();
+        }
+
         selects.forEach(select => {
             if (!select) return;
             const currentValue = select.value;
+            
             let html = paymentMethods.map(m => `<option value="${m.name}">${m.name}</option>`).join('');
+            
+            // If still empty after map, add a default placeholder or the current value
+            if (!html && currentValue) {
+                html = `<option value="${currentValue}">${currentValue}</option>`;
+            }
+
             select.innerHTML = html;
-            if ([...select.options].some(o => o.value === currentValue)) {
+            
+            // Restore value if it exists in the new list
+            if (currentValue && [...select.options].some(o => o.value === currentValue)) {
                 select.value = currentValue;
             }
         });
@@ -426,6 +444,7 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             tabTitle.textContent = titles[targetTab];
             if (targetTab === 'dashboard') loadDashboard();
+            if (targetTab === 'insert') updatePaymentSelects();
             if (targetTab === 'records') loadLessons();
             if (targetTab === 'graphics') updateGraphics();
             if (targetTab === 'regtab') loadRegTab();
@@ -1128,6 +1147,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const res = await fetch('/api/lessons');
         const lessons = await res.json();
         renderCurrentMonthDoughnut(lessons);
+        renderWeeklySummary(lessons);
     }
 
     function renderCurrentMonthDoughnut(lessons) {
@@ -1269,6 +1289,63 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function renderWeeklySummary(lessons) {
+        const now = new Date();
+        const todayStr = getLocalYYYYMMDD(now);
+        
+        // Find Monday of the current week
+        const d = new Date(now);
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+        const monday = new Date(d.setDate(diff));
+        monday.setHours(0, 0, 0, 0);
+        
+        // Find Sunday of the current week
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        sunday.setHours(23, 59, 59, 999);
+        
+        const mondayStr = getLocalYYYYMMDD(monday);
+        const sundayStr = getLocalYYYYMMDD(sunday);
+        
+        document.getElementById('current-week-label').textContent = `W/C ${monday.getDate()}/${monday.getMonth() + 1} to ${sunday.getDate()}/${sunday.getMonth() + 1}`;
+
+        const weekLessons = lessons.filter(l => {
+            return l.date >= mondayStr && l.date <= sundayStr;
+        });
+
+        const completedLessons = weekLessons.filter(l => l.session_status === 'Completed');
+        const plannedLessons = weekLessons.filter(l => l.session_status === 'Planned');
+        
+        const completedCount = completedLessons.length;
+        const plannedCount = plannedLessons.length;
+        const totalCount = weekLessons.length;
+
+        const completedValue = completedLessons.reduce((sum, l) => sum + (parseFloat(l.total_value) || 0), 0);
+        const plannedValue = plannedLessons.reduce((sum, l) => sum + (parseFloat(l.total_value) || 0), 0);
+        const totalValue = completedValue + plannedValue;
+
+        const formatCurrency = (val) => isPrivate ? '£ ****' : `£ ${val.toFixed(2)}`;
+
+        document.getElementById('week-financial-summary').innerHTML = `
+            <div style="font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">Weekly Total</div>
+            <div style="font-size: 1.6rem; font-weight: bold; color: #333; margin-bottom: 10px;">${formatCurrency(totalValue)} <span style="font-size: 0.9rem; color: #666; font-weight: normal;">(${totalCount} sessions)</span></div>
+            <div style="display: flex; justify-content: space-around; padding: 10px; background: #f9f9f9; border-radius: 12px;">
+                <div style="flex: 1;">
+                    <div style="font-size: 0.7rem; color: #888;">COMPLETED</div>
+                    <div style="font-size: 1rem; font-weight: bold; color: #1976d2;">${formatCurrency(completedValue)}</div>
+                    <div style="font-size: 0.7rem; color: #666;">${completedCount} sessions</div>
+                </div>
+                <div style="width: 1px; background: #ddd; margin: 0 10px;"></div>
+                <div style="flex: 1;">
+                    <div style="font-size: 0.7rem; color: #888;">PLANNED</div>
+                    <div style="font-size: 1rem; font-weight: bold; color: #4caf50;">${formatCurrency(plannedValue)}</div>
+                    <div style="font-size: 0.7rem; color: #666;">${plannedCount} sessions</div>
+                </div>
+            </div>
+        `;
+    }
+
     async function loadLessons() {
         const res = await fetch('/api/lessons');
         const lessons = await res.json();
@@ -1354,6 +1431,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     window.openPayModal = (lesson) => {
+        // Ensure selects are populated
+        updatePaymentSelects();
+        
         document.getElementById('pay-lesson-id').value = lesson.id;
         document.getElementById('pay-amount').value = parseFloat(lesson.total_value).toFixed(2);
         document.getElementById('pay-method').value = lesson.payment_method || '';
