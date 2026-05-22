@@ -261,26 +261,34 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // If paymentMethods is null, it hasn't been fetched yet
         if (paymentMethods === null) {
-            console.log('Payment methods not loaded yet, triggering fetch...');
+            console.log('[DEBUG] Payment methods null, loading...');
             loadPaymentMethods();
             return;
         }
+
+        console.log('[DEBUG] Updating selects with methods:', paymentMethods);
 
         selects.forEach(select => {
             if (!select) return;
             const currentValue = select.value;
             
-            let html = paymentMethods.map(m => `<option value="${m.name}">${m.name}</option>`).join('');
+            // Build options from registered methods
+            let options = paymentMethods.map(m => `<option value="${m.name}">${m.name}</option>`);
             
-            // If empty (no registered methods), add a default "N/A" or similar to avoid empty dropdown
-            if (!html) {
-                html = `<option value="">No methods registered</option>`;
+            // CRITICAL: If there's a current value and it's not in the list, add it!
+            if (currentValue && !paymentMethods.some(m => m.name === currentValue)) {
+                options.unshift(`<option value="${currentValue}">${currentValue}</option>`);
             }
 
-            select.innerHTML = html;
+            // If still no options at all, add a default placeholder
+            if (options.length === 0) {
+                options.push(`<option value="">(No methods registered)</option>`);
+            }
+
+            select.innerHTML = options.join('');
             
-            // Restore value if it exists in the new list
-            if (currentValue && [...select.options].some(o => o.value === currentValue)) {
+            // Restore the value
+            if (currentValue) {
                 select.value = currentValue;
             }
         });
