@@ -21,7 +21,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadingOverlay = document.getElementById('loading-overlay');
     const loadingText = document.getElementById('loading-text');
 
-    let paymentMethods = [];
+    let paymentMethods = null;
+    let isLoadingPayments = false;
 
     function showLoading(text = 'Processing...') {
         loadingText.textContent = text;
@@ -155,10 +156,24 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     async function loadPaymentMethods() {
-        const res = await fetch('/api/payment-methods');
-        paymentMethods = await res.json();
-        renderPaymentMethods();
-        updatePaymentSelects();
+        if (isLoadingPayments) return;
+        isLoadingPayments = true;
+        try {
+            const res = await fetch('/api/payment-methods');
+            if (res.ok) {
+                paymentMethods = await res.json();
+                renderPaymentMethods();
+                updatePaymentSelects();
+            } else {
+                console.error('Failed to load payment methods');
+                paymentMethods = paymentMethods || []; // Keep existing or set to empty
+            }
+        } catch (err) {
+            console.error('Error loading payment methods:', err);
+            paymentMethods = paymentMethods || [];
+        } finally {
+            isLoadingPayments = false;
+        }
     }
 
     async function loadCoachRates() {
@@ -209,6 +224,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderPaymentMethods() {
         const list = document.getElementById('payment-methods-list');
+        if (!list || paymentMethods === null) return;
+
         if (paymentMethods.length === 0) {
             list.innerHTML = '<p style="text-align:center;color:#888;">No methods registered.</p>';
             return;
@@ -242,12 +259,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function updatePaymentSelects() {
         const selects = [paymentMethodInput, payMethodModalInput];
         
-        // If paymentMethods is empty, try to reload once
-        if (paymentMethods.length === 0) {
-            console.log('Payment methods empty, reloading...');
-            // This is async but we don't await it to avoid blocking UI, 
-            // the next call will have them.
+        // If paymentMethods is null, it hasn't been fetched yet
+        if (paymentMethods === null) {
+            console.log('Payment methods not loaded yet, triggering fetch...');
             loadPaymentMethods();
+            return;
         }
 
         selects.forEach(select => {
@@ -256,9 +272,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             let html = paymentMethods.map(m => `<option value="${m.name}">${m.name}</option>`).join('');
             
-            // If still empty after map, add a default placeholder or the current value
-            if (!html && currentValue) {
-                html = `<option value="${currentValue}">${currentValue}</option>`;
+            // If empty (no registered methods), add a default "N/A" or similar to avoid empty dropdown
+            if (!html) {
+                html = `<option value="">No methods registered</option>`;
             }
 
             select.innerHTML = html;
