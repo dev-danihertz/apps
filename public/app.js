@@ -898,11 +898,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
             });
-            if (res.ok) { 
-                showDashboard(); 
-                showToast('Welcome back!'); 
-            } else {
-                const errorData = await res.json();
+            if (res.ok) {
+                await loadPaymentMethods();
+                showDashboard();
+                showToast('Welcome back!');
+            } else {                const errorData = await res.json();
                 showToast(errorData.error || 'Invalid credentials.', 'error');
             }
         } catch (err) {
@@ -1165,6 +1165,7 @@ document.addEventListener('DOMContentLoaded', () => {
         resetScreen.classList.add('hidden');
         dashboardScreen.classList.remove('hidden');
         loadDashboard();
+        loadPaymentMethods(); // Ensure payment methods are loaded when showing dashboard
     }
 
     async function loadDashboard() {
