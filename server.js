@@ -220,7 +220,74 @@ app.delete('/api/lessons/:id', isAuthenticated, (req, res) => {
   });
 });
 
+app.delete('/api/lessons', isAuthenticated, (req, res) => {
+  const todayInLondon = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/London',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(new Date());
+
+  if (todayInLondon > '2026-10-26') {
+    return res.status(410).json({ error: 'Temporary lesson deletion is no longer available.' });
+  }
+  if (req.body?.confirmation !== 'DELETE ALL LESSONS') {
+    return res.status(400).json({ error: 'The required confirmation was not provided.' });
+  }
+
+  db.run("DELETE FROM lessons WHERE user_id = ?", [req.session.userId], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ message: 'Lesson records deleted.', deletedCount: this.changes });
+  });
+});
+
 // PAYMENT METHODS ENDPOINTS
+app.get('/api/models', isAuthenticated, (req, res) => {
+  db.all("SELECT id, name, color FROM models WHERE user_id = ? ORDER BY name COLLATE NOCASE ASC", [req.session.userId], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+app.post('/api/models', isAuthenticated, (req, res) => {
+  const name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
+  const color = typeof req.body.color === 'string' ? req.body.color.trim() : '#4E79A7';
+  if (!name) return res.status(400).json({ error: 'Model name is required.' });
+  if (!/^#[0-9a-fA-F]{6}$/.test(color)) return res.status(400).json({ error: 'Choose a valid model color.' });
+
+  db.run("INSERT INTO models (user_id, name, color) VALUES (?, ?, ?)", [req.session.userId, name, color], function(err) {
+    if (err) {
+      if (err.message.includes('UNIQUE')) return res.status(409).json({ error: 'This model is already registered.' });
+      return res.status(500).json({ error: err.message });
+    }
+    res.status(201).json({ id: this.lastID, name, color });
+  });
+});
+
+app.put('/api/models/:id', isAuthenticated, (req, res) => {
+  const name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
+  const color = typeof req.body.color === 'string' ? req.body.color.trim() : '#4E79A7';
+  if (!name) return res.status(400).json({ error: 'Model name is required.' });
+  if (!/^#[0-9a-fA-F]{6}$/.test(color)) return res.status(400).json({ error: 'Choose a valid model color.' });
+
+  db.run("UPDATE models SET name = ?, color = ? WHERE id = ? AND user_id = ?", [name, color, req.params.id, req.session.userId], function(err) {
+    if (err) {
+      if (err.message.includes('UNIQUE')) return res.status(409).json({ error: 'This model is already registered.' });
+      return res.status(500).json({ error: err.message });
+    }
+    if (!this.changes) return res.status(404).json({ error: 'Model not found.' });
+    res.json({ success: true, id: Number(req.params.id), name, color });
+  });
+});
+
+app.delete('/api/models/:id', isAuthenticated, (req, res) => {
+  db.run("DELETE FROM models WHERE id = ? AND user_id = ?", [req.params.id, req.session.userId], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!this.changes) return res.status(404).json({ error: 'Model not found.' });
+    res.json({ success: true });
+  });
+});
+
 app.get('/api/payment-methods', isAuthenticated, (req, res) => {
   const userId = req.session.userId;
   db.all("SELECT * FROM payment_methods WHERE user_id = ? ORDER BY name ASC", [userId], (err, rows) => {

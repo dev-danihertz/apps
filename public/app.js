@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadingText = document.getElementById('loading-text');
 
     let paymentMethods = null;
+    let models = [];
     let isLoadingPayments = false;
 
     function showLoading(text = 'Processing...') {
@@ -175,6 +176,158 @@ document.addEventListener('DOMContentLoaded', () => {
             isLoadingPayments = false;
         }
     }
+
+    const escapeModelText = (value) => String(value).replace(/[&<>"']/g, character => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[character]);
+
+    async function loadModels() {
+        try {
+            const res = await fetch('/api/models');
+            if (!res.ok) throw new Error('Failed to load models.');
+            models = await res.json();
+            renderModels();
+            updateModelSelect();
+        } catch (err) {
+            console.error('Error loading models:', err);
+        }
+    }
+
+    function renderModels() {
+        const list = document.getElementById('models-list');
+        if (!list) return;
+        if (models.length === 0) {
+            list.innerHTML = '<p style="text-align:center;color:#888;">No models registered.</p>';
+            return;
+        }
+
+        list.innerHTML = `
+            <table class="full-table" style="margin-top: 10px; font-size: 0.9rem;">
+                <thead><tr>
+                    <th style="text-align: left; padding: 8px;">Model Name</th>
+                    <th style="width: 110px; text-align: center; padding: 8px;">Color</th>
+                    <th style="width: 100px; text-align: center; padding: 8px;">Actions</th>
+                </tr></thead>
+                <tbody>${models.map(model => `
+                    <tr>
+                        <td style="padding: 8px; font-weight: 500;">${escapeModelText(model.name)}</td>
+                        <td style="text-align: center; padding: 4px;">
+                            <input type="color" value="${/^#[0-9a-fA-F]{6}$/.test(model.color || '') ? model.color : '#4E79A7'}" data-model-action="color" data-model-id="${model.id}" aria-label="Color for ${escapeModelText(model.name)}" style="width: 48px; height: 34px; padding: 2px; cursor: pointer;">
+                        </td>
+                        <td style="text-align: center; padding: 4px;">
+                            <button class="btn-icon" data-model-action="edit" data-model-id="${model.id}" style="font-size: 1.1rem;">✎</button>
+                            <button class="btn-icon" data-model-action="delete" data-model-id="${model.id}" style="color: #d32f2f; font-size: 1.1rem; margin-left: 15px;">🗑</button>
+                        </td>
+                    </tr>`).join('')}
+                </tbody>
+            </table>`;
+    }
+
+    function updateModelSelect() {
+        if (!modelInput) return;
+        const currentValue = modelInput.value;
+        const options = models.map(model => `<option value="${escapeModelText(model.name)}">${escapeModelText(model.name)}</option>`);
+        if (currentValue && !models.some(model => model.name === currentValue)) {
+            options.unshift(`<option value="${escapeModelText(currentValue)}">${escapeModelText(currentValue)} (previously used)</option>`);
+        }
+        modelInput.innerHTML = options.length ? options.join('') : '<option value="">(No models registered)</option>';
+        if (currentValue && Array.from(modelInput.options).some(option => option.value === currentValue)) {
+            modelInput.value = currentValue;
+        } else if (models.length) {
+            modelInput.value = models[0].name;
+        }
+
+        const bulkModelSelect = document.getElementById('filter-bulk-model');
+        if (bulkModelSelect) {
+            const currentFilter = bulkModelSelect.value;
+            const filterOptions = ['<option value="">Todos</option>', ...models.map(model =>
+                `<option value="${escapeModelText(model.name)}">${escapeModelText(model.name)}</option>`
+            )];
+            if (currentFilter && !models.some(model => model.name === currentFilter)) {
+                filterOptions.push(`<option value="${escapeModelText(currentFilter)}">${escapeModelText(currentFilter)}</option>`);
+            }
+            bulkModelSelect.innerHTML = filterOptions.join('');
+            bulkModelSelect.value = currentFilter;
+        }
+    }
+
+    document.getElementById('model-form')?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const nameInput = document.getElementById('new-model-name');
+        const colorInput = document.getElementById('new-model-color');
+        const name = nameInput.value.trim();
+        if (!name) return;
+
+        const res = await fetch('/api/models', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, color: colorInput.value })
+        });
+        const data = await res.json();
+        if (!res.ok) return showToast(data.error || 'Could not add model.', 'error');
+
+        nameInput.value = '';
+        colorInput.value = '#4E79A7';
+        document.getElementById('models-list').classList.remove('hidden');
+        await loadModels();
+        showToast('Model added!');
+    });
+
+    document.getElementById('toggle-model-list')?.addEventListener('click', () => {
+        document.getElementById('models-list').classList.toggle('hidden');
+    });
+
+    document.getElementById('models-list')?.addEventListener('click', async (event) => {
+        const button = event.target.closest('[data-model-action]');
+        if (!button) return;
+        const id = Number(button.dataset.modelId);
+        const model = models.find(item => item.id === id);
+        if (!model) return;
+
+        if (button.dataset.modelAction === 'edit') {
+            const name = prompt('Edit model name:', model.name)?.trim();
+            if (!name || name === model.name) return;
+            const res = await fetch(`/api/models/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, color: model.color || '#4E79A7' })
+            });
+            const data = await res.json();
+            if (!res.ok) return showToast(data.error || 'Could not update model.', 'error');
+            if (modelInput.value === model.name) modelInput.value = name;
+            await loadModels();
+            showToast('Model updated!');
+        } else if (button.dataset.modelAction === 'delete' && confirm(`Delete model "${model.name}" from the registered models? Existing lesson records will keep their saved model name.`)) {
+            const res = await fetch(`/api/models/${id}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (!res.ok) return showToast(data.error || 'Could not delete model.', 'error');
+            if (modelInput.value === model.name) modelInput.value = '';
+            await loadModels();
+            showToast('Model deleted.');
+        }
+    });
+
+    document.getElementById('models-list')?.addEventListener('change', async (event) => {
+        const colorInput = event.target.closest('[data-model-action="color"]');
+        if (!colorInput) return;
+        const id = Number(colorInput.dataset.modelId);
+        const model = models.find(item => item.id === id);
+        if (!model) return;
+
+        const res = await fetch(`/api/models/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: model.name, color: colorInput.value })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            showToast(data.error || 'Could not update model color.', 'error');
+            colorInput.value = model.color || '#4E79A7';
+            return;
+        }
+        model.color = data.color;
+        showToast('Model color saved.');
+    });
 
     async function loadCoachRates() {
         const res = await fetch('/api/coach-rates');
@@ -463,17 +616,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 regtab: 'Full Records', 
                 data: 'Manage Data', 
                 bulk: 'Bulk Actions', 
-                cadastros: 'Payment Methods',
+                cadastros: 'Registrations',
                 profile: 'My Profile'
             };
             tabTitle.textContent = titles[targetTab];
             if (targetTab === 'dashboard') loadDashboard();
-            if (targetTab === 'insert') updatePaymentSelects();
+            if (targetTab === 'insert') {
+                updatePaymentSelects();
+                updateModelSelect();
+            }
             if (targetTab === 'records') loadLessons();
             if (targetTab === 'graphics') updateGraphics();
             if (targetTab === 'regtab') loadRegTab();
             if (targetTab === 'cadastros') {
                 loadPaymentMethods();
+                loadModels();
                 loadCoachRates();
             }
             if (targetTab === 'profile') loadUserProfile();
@@ -1470,6 +1627,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function updateGraphics() {
         if (typeof Chart === 'undefined') return;
+        await loadModels();
         const res = await fetch('/api/lessons');
         const allLessons = await res.json();
         const todayStr = getLocalYYYYMMDD(new Date());
@@ -1641,14 +1799,41 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function modelFrequencyDatasets(periods, sortedKeys, modelNames) {
+        return modelNames.map(modelName => {
+            const registeredModel = models.find(model => model.name === modelName);
+            const color = /^#[0-9a-fA-F]{6}$/.test(registeredModel?.color || '') ? registeredModel.color : '#7F8C8D';
+            return {
+                label: modelName,
+                data: sortedKeys.map(key => periods[key].counts[modelName] || 0),
+                borderColor: color,
+                backgroundColor: color,
+                pointBackgroundColor: color,
+                pointBorderColor: color,
+                pointRadius: context => context.raw === 0 ? 0 : 5,
+                pointHoverRadius: context => context.raw === 0 ? 0 : 7,
+                borderWidth: 2,
+                fill: false,
+                tension: 0.3
+            };
+        });
+    }
+
+    function frequencyChartOptions() {
+        const options = chartOptions(true);
+        options.plugins.legend = { display: true, position: 'bottom' };
+        return options;
+    }
+
     function renderMonthlyChart(lessons) {
         const monthlyData = {};
-        lessons.forEach(l => {
-            const [year, month] = l.date.split('-');
-            const monthLabel = `${month}/${year}`;
+        const modelNames = [...new Set(lessons.map(lesson => lesson.model || 'KG Academy'))];
+        lessons.forEach(lesson => {
+            const [year, month] = lesson.date.split('-');
             const key = `${year}-${month}`;
-            if (!monthlyData[key]) monthlyData[key] = { label: monthLabel, count: 0 };
-            monthlyData[key].count++;
+            if (!monthlyData[key]) monthlyData[key] = { label: `${month}/${year}`, counts: {} };
+            const modelName = lesson.model || 'KG Academy';
+            monthlyData[key].counts[modelName] = (monthlyData[key].counts[modelName] || 0) + 1;
         });
         const sortedKeys = Object.keys(monthlyData).sort();
         const ctx = document.getElementById('monthlyChart').getContext('2d');
@@ -1657,29 +1842,26 @@ document.addEventListener('DOMContentLoaded', () => {
             type: 'line',
             data: {
                 labels: sortedKeys.map(k => monthlyData[k].label),
-                datasets: [{
-                    label: 'Number of Lessons',
-                    data: sortedKeys.map(k => monthlyData[k].count),
-                    borderColor: '#2e7d32', backgroundColor: 'rgba(46, 125, 50, 0.1)',
-                    borderWidth: 3, fill: true, tension: 0.3
-                }]
+                datasets: modelFrequencyDatasets(monthlyData, sortedKeys, modelNames)
             },
-            options: chartOptions(true),
+            options: frequencyChartOptions(),
             plugins: [pointValuePlugin]
         });
     }
 
     function renderWeeklyChart(lessons) {
         const weeklyData = {};
-        lessons.forEach(l => {
-            const d = new Date(l.date + 'T12:00:00');
+        const modelNames = [...new Set(lessons.map(lesson => lesson.model || 'KG Academy'))];
+        lessons.forEach(lesson => {
+            const d = new Date(lesson.date + 'T12:00:00');
             const day = d.getDay();
             const diff = d.getDate() - day + (day === 0 ? -6 : 1);
             const monday = new Date(d.setDate(diff));
             const weekKey = monday.toISOString().split('T')[0];
             const weekLabel = `W/C ${monday.getDate()}/${monday.getMonth() + 1}`;
-            if (!weeklyData[weekKey]) weeklyData[weekKey] = { label: weekLabel, count: 0 };
-            weeklyData[weekKey].count++;
+            if (!weeklyData[weekKey]) weeklyData[weekKey] = { label: weekLabel, counts: {} };
+            const modelName = lesson.model || 'KG Academy';
+            weeklyData[weekKey].counts[modelName] = (weeklyData[weekKey].counts[modelName] || 0) + 1;
         });
         const sortedKeys = Object.keys(weeklyData).sort();
         const ctx = document.getElementById('weeklyChart').getContext('2d');
@@ -1688,14 +1870,9 @@ document.addEventListener('DOMContentLoaded', () => {
             type: 'line',
             data: {
                 labels: sortedKeys.map(k => weeklyData[k].label),
-                datasets: [{
-                    label: 'Number of Lessons',
-                    data: sortedKeys.map(k => weeklyData[k].count),
-                    borderColor: '#1976d2', backgroundColor: 'rgba(25, 118, 210, 0.1)',
-                    borderWidth: 3, fill: true, tension: 0.3
-                }]
+                datasets: modelFrequencyDatasets(weeklyData, sortedKeys, modelNames)
             },
-            options: chartOptions(true),
+            options: frequencyChartOptions(),
             plugins: [pointValuePlugin]
         });
     }
@@ -1851,9 +2028,62 @@ document.addEventListener('DOMContentLoaded', () => {
     const importBtn = document.getElementById('import-btn');
     const importFile = document.getElementById('import-file');
     const exportBtn = document.getElementById('export-btn');
+    const deleteAllLessonsBtn = document.getElementById('delete-all-lessons-btn');
+
+    const londonToday = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Europe/London',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    }).format(new Date());
+    if (londonToday > '2026-10-26') {
+        document.getElementById('temporary-delete-lessons-card')?.remove();
+    }
 
     exportBtn?.addEventListener('click', () => {
         window.location.href = '/api/export';
+    });
+
+    deleteAllLessonsBtn?.addEventListener('click', async () => {
+        const cutoffDate = '2026-10-26';
+        const today = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Europe/London',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        }).format(new Date());
+        if (today > cutoffDate) {
+            document.getElementById('temporary-delete-lessons-card')?.remove();
+            return;
+        }
+
+        if (!confirm('CONFIRMATION 1 OF 2: Permanently delete every lesson record in this database? This cannot be undone.')) return;
+        const confirmation = prompt('CONFIRMATION 2 OF 2: Type DELETE ALL LESSONS exactly to proceed.');
+        if (confirmation !== 'DELETE ALL LESSONS') {
+            if (confirmation !== null) showToast('Confirmation text did not match. No records were deleted.', 'warning');
+            return;
+        }
+
+        deleteAllLessonsBtn.disabled = true;
+        showLoading('Deleting all lesson records...');
+        try {
+            const res = await fetch('/api/lessons', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ confirmation })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Could not delete lesson records.');
+
+            showToast(`${data.deletedCount} lesson records deleted.`);
+            loadDashboard();
+            loadLessons();
+        } catch (err) {
+            showToast(err.message, 'error');
+        } finally {
+            hideLoading();
+            deleteAllLessonsBtn.disabled = false;
+        }
     });
 
     importBtn?.addEventListener('click', async () => {
@@ -1902,6 +2132,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     cancelEdit();
     loadPaymentMethods();
+    loadModels();
     loadCoachRates();
 
     // Lógica para mostrar/esconder senha

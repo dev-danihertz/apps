@@ -339,13 +339,13 @@
                 <!-- Graphics Tab -->
                 <div id="tab-graphics" class="tab-pane hidden">
                     <div class="card">
-                        <h3>Monthly Frequency</h3>
+                        <h3>Monthly Frequency by Model</h3>
                         <div class="chart-container">
                             <canvas id="monthlyChart"></canvas>
                         </div>
                     </div>
                     <div class="card" style="margin-top: 20px;">
-                        <h3>Weekly Frequency</h3>
+                        <h3>Weekly Frequency by Model</h3>
                         <div class="chart-container">
                             <canvas id="weeklyChart"></canvas>
                         </div>
@@ -431,6 +431,22 @@
 
                 <!-- Cadastros Tab -->
                 <div id="tab-cadastros" class="tab-pane hidden">
+                    <div class="card accordion-item">
+                        <h3 class="accordion-header" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+                            <span>Models</span>
+                            <span class="chevron">▼</span>
+                        </h3>
+                        <div class="accordion-content hidden" style="margin-top: 20px;">
+                            <form id="model-form" style="display: flex; gap: 10px; margin-bottom: 20px;">
+                                <input type="text" id="new-model-name" placeholder="Model name" required style="flex: 1;">
+                                <label for="new-model-color" style="display: flex; align-items: center; gap: 6px; white-space: nowrap;">Color <input type="color" id="new-model-color" value="#4E79A7" aria-label="Model color" style="width: 44px; height: 42px; padding: 3px;"></label>
+                                <button type="submit" class="btn-primary" style="margin-top: 0; width: auto; padding: 0 20px;">Add</button>
+                            </form>
+                            <button id="toggle-model-list" class="btn-text" style="width: 100%; margin-bottom: 10px; text-decoration: underline; font-size: 0.9rem;">View/Manage Registered Models</button>
+                            <div id="models-list" class="hidden" style="display: flex; flex-direction: column; gap: 10px;"></div>
+                        </div>
+                    </div>
+
                     <div class="card accordion-item">
                         <h3 class="accordion-header" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
                             <span>Payment Methods</span>
@@ -663,6 +679,12 @@
                         <h3>Export Data</h3>
                         <p style="margin-bottom: 15px; color: #666; font-size: 0.9rem;">Download all your lesson records as a CSV file for backup.</p>
                         <button id="export-btn" class="btn-primary">Download Backup (.csv)</button>
+                    </div>
+
+                    <div class="card" id="temporary-delete-lessons-card" style="margin-top: 20px; border: 2px solid #c62828;">
+                        <h3 style="color: #c62828;">Temporary: Delete All Lesson Records</h3>
+                        <p style="margin-bottom: 15px; color: #666; font-size: 0.9rem;">Permanently deletes all lesson records from this database. This action cannot be undone. You will need to confirm twice.</p>
+                        <button id="delete-all-lessons-btn" class="btn-primary" style="background-color: #c62828;">Delete All Lesson Records</button>
                     </div>
 
                     <div class="card" style="margin-top: 20px;">

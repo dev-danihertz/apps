@@ -150,6 +150,39 @@ db.serialize(() => {
       });
     }
   });
+
+  // Tabela de modelos disponíveis nos registros de aulas
+  db.get("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'models'", (err, table) => {
+    if (err) return console.error('Erro ao verificar tabela models:', err.message);
+    db.run(`CREATE TABLE IF NOT EXISTS models (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      name TEXT NOT NULL COLLATE NOCASE,
+      color TEXT NOT NULL DEFAULT '#4E79A7',
+      UNIQUE(user_id, name),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )`, (createErr) => {
+      if (createErr) return console.error('Erro ao criar tabela models:', createErr.message);
+      db.all('PRAGMA table_info(models)', (columnsErr, columns) => {
+        if (columnsErr) return console.error('Erro ao verificar tabela models:', columnsErr.message);
+        const ensureModelsReady = () => {
+          if (!table) {
+            const stmt = db.prepare("INSERT OR IGNORE INTO models (user_id, name) VALUES (1, ?)");
+            ['KG Academy', 'Before KG'].forEach(name => stmt.run([name]));
+            stmt.finalize();
+          }
+        };
+        if (!columns.some(column => column.name === 'color')) {
+          db.run("ALTER TABLE models ADD COLUMN color TEXT NOT NULL DEFAULT '#4E79A7'", (alterErr) => {
+            if (alterErr) return console.error('Erro ao adicionar cor aos modelos:', alterErr.message);
+            ensureModelsReady();
+          });
+        } else {
+          ensureModelsReady();
+        }
+      });
+    });
+  });
 });
 
 module.exports = db;
